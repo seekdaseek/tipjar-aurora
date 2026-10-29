@@ -2,6 +2,7 @@
 // A tip counts as evidence only when Aurora reported SUCCESS and gave BOTH an origin-chain and a destination-chain
 // explorer link. Nothing is hand-entered, so the headline number cannot include fixtures.
 import { readFileSync } from 'node:fs';
+import { txLinks } from '../src/explorers.js';
 
 const file = process.argv[2] || './data/tips.jsonl';
 const quotes = new Map();
@@ -26,8 +27,13 @@ for (const [addr, f] of finals) {
   if (!q) continue;
   if (f.stage === 'refunded') refunded++;
   else if (f.stage === 'failed') failed++;
-  else if (f.stage === 'arrived' && f.links?.origin?.length && f.links?.destination?.length) {
-    rows.push({ chain: q.chain, symbol: q.symbol, delivered: f.amounts?.delivered, usd: f.amounts?.deliveredUsd, creator: q.creatorWallet, origin: f.links.origin[0].url, destination: f.links.destination[0].url });
+  else if (f.stage === 'arrived') {
+    // Early log entries stored empty links (Aurora sent no explorerUrl); rebuild them from the stored Aurora hashes, never from input.
+    const sd = f.raw?.swapDetails ?? {};
+    const origin = f.links?.origin?.length ? f.links.origin : txLinks(sd.originChainTxHashes, q.chain);
+    const destination = f.links?.destination?.length ? f.links.destination : txLinks(sd.destinationChainTxHashes, 'sol');
+    if (f.raw?.status === 'SUCCESS' && origin.length && destination.length)
+      rows.push({ chain: q.chain, symbol: q.symbol, delivered: f.amounts?.delivered, usd: f.amounts?.deliveredUsd, creator: q.creatorWallet, origin: origin[0].url, destination: destination[0].url });
   }
 }
 

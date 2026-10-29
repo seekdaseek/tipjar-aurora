@@ -242,6 +242,16 @@ test('status: non-https explorer links from upstream are dropped', async () => {
   assert.deepEqual(s.links.origin, [{ hash: 'b', url: 'https://ok.example/b' }]);
 });
 
+test('status: SUCCESS with empty explorerUrl (as Aurora really returns it) still gives both links', async () => {
+  const origin = '0x' + 'cd'.repeat(32);
+  const dest = '3' + 'G'.repeat(87);
+  const { service, q } = await tipWith([{ status: 'SUCCESS', swapDetails: { originChainTxHashes: [{ hash: origin, explorerUrl: '' }], destinationChainTxHashes: [{ hash: dest, explorerUrl: '' }] } }]);
+  const s = await service.tipStatus(q.depositAddress);
+  assert.equal(s.stage, 'arrived');
+  assert.deepEqual(s.links.origin, [{ hash: origin, url: 'https://basescan.org/tx/' + origin }]);
+  assert.deepEqual(s.links.destination, [{ hash: dest, url: 'https://explorer.solana.com/tx/' + dest }]);
+});
+
 test('status polling is cached: many clients inside 5 s cost one upstream call; terminal state is final', async () => {
   const { service, clock, q } = await tipWith([{ status: 'PROCESSING' }, { status: 'SUCCESS', swapDetails: {} }]);
   const statusCalls = () => fake.requests.filter((r) => r.path.startsWith('/api/status')).length;

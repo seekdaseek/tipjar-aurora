@@ -1,5 +1,6 @@
 import { ADDRESS_CHECKS, formatMinor, isSolanaAddress, usdToMinor } from './validate.js';
 import { buildRoutes, FAMILY_HINT, DEST } from './routes.js';
+import { txLinks } from './explorers.js';
 
 export const SUPPORT_URL = 'https://aurora.dev/intents-support';
 const TOKEN_TTL_MS = 5 * 60_000;
@@ -13,12 +14,6 @@ export class TipError extends Error {
     this.http = http;
   }
 }
-
-const safeLinks = (arr) =>
-  (Array.isArray(arr) ? arr : [])
-    .filter((x) => typeof x?.explorerUrl === 'string' && x.explorerUrl.startsWith('https://'))
-    .slice(0, 5)
-    .map((x) => ({ hash: String(x.hash).slice(0, 128), url: x.explorerUrl.slice(0, 300) }));
 
 const big = (v) => {
   try {
@@ -297,7 +292,7 @@ export class TipService {
   derive(raw, rec) {
     const status = raw?.status ?? 'PENDING_DEPOSIT';
     const d = raw?.swapDetails ?? {};
-    const links = { origin: safeLinks(d.originChainTxHashes), destination: safeLinks(d.destinationChainTxHashes) };
+    const links = { origin: txLinks(d.originChainTxHashes, rec.chain), destination: txLinks(d.destinationChainTxHashes, DEST.chain) };
     const sym = rec.symbol;
     const expiredAt = rec.deadline ? Date.parse(rec.deadline) : NaN;
     let stage;
