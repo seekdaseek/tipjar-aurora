@@ -9,6 +9,23 @@ Aurora products used: **Swap API** (Aurora Intents, powered by NEAR Intents). Pl
 organisation, is **Intents Deposits** persistent addresses (one address per creator that accepts tips from any chain);
 see [docs/AURORA-NOTES.md](docs/AURORA-NOTES.md).
 
+## Verify the real tip (mainnet, 2026-10-29)
+
+One real tip went through the live page: **1.04 USDC sent on Base arrived as 1.029777 USDC in the creator's Solana wallet**
+(about 1% in fees), about 35 seconds after the Base transaction confirmed.
+
+| | |
+|---|---|
+| Receipt (read-only, live status from the backend) | https://tipjar-aurora.pages.dev/#tip=0xbfa9d9c3457acaa0f755c79631758673dbc7b00a |
+| Tip on Base (18:13:15 UTC) | https://basescan.org/tx/0xcfe9d57b9b29581bb5eeb87b5069da2749ccae2f27d9222d9aebff0790464c80 |
+| Arrival on Solana (18:13:50 UTC, finalized) | https://explorer.solana.com/tx/2FfaTW7nkQ7mCM5x7c26MnxPcq21g35vSc7taHYrz3HW29RQFBnsQDzpQZHzyEfMD8N24L2vmtWGgpCr4WR8ZNkd |
+
+The receipt link is `https://tipjar-aurora.pages.dev/#tip=<deposit address>`. It only reads that tip's status
+(`GET /api/tip/<address>`), never creates a quote, and shows the same Waiting / Received / Arrived card with both proof
+links. The backend counts real tips from its own log with `node backend/scripts/evidence.mjs` (SUCCESS plus both transaction
+links). Only Base has a real tip so far, and the refund path is covered by tests against a fake Aurora API but has not been
+exercised live. The live demo (https://tipjar-aurora.pages.dev) moves real money on mainnet.
+
 ## What existed before, and what was built in the four weeks
 
 Be explicit, as the rules ask.
@@ -19,7 +36,7 @@ Database creator registry.
 
 **Built during the hackathon (every commit after `baseline-v1.2`)**:
 - `backend/`: the service that holds the Aurora API key, requests Swap API quotes, validates addresses, polls and
-  normalises status, and logs real tips for evidence. Zero dependencies, 35 tests against a fake Aurora API.
+  normalises status, and logs real tips for evidence. Zero dependencies, 61 tests against a fake Aurora API.
 - `src/screens/AnyChainTipScreen.tsx` and `src/anyChain/`: the new screen, API client, local QR renderer, stage logic.
 - `docs/`: Aurora API notes, deploy runbook. `database.rules.json`: locked-down registry rules.
 - Moved the Firebase web config out of git (`firebase.config.example.ts`).
