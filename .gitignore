@@ -64,3 +64,6 @@ yarn-error.log
 
 # testing
 /coverage
+
+# Firebase web config (real values stay local)
+firebase.config.ts
