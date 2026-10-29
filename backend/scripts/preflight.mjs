@@ -13,7 +13,7 @@ const cfg = {
   creatorWallet: a.creator,
   sendExact: a.mode !== 'receive',
 };
-if (!cfg.wallet || !cfg.creator) {
+if (!cfg.wallet || !cfg.creatorWallet) {
   console.error('usage: --wallet=<tipper address on the chain> --creator=<creator Solana wallet>');
   process.exit(2);
 }

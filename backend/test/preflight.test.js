@@ -71,3 +71,16 @@ test('the balance read targets the token contract with a balanceOf call for the 
   assert.equal(call.to, '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913');
   assert.equal(call.data, '0x70a08231000000000000000000000000' + EVM.slice(2).toLowerCase());
 });
+
+// The CLI once rejected valid arguments (it read cfg.creator instead of cfg.creatorWallet); run it as a process.
+test('preflight CLI accepts --wallet and --creator and gets as far as the key check', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const env = { PATH: process.env.PATH };
+  const run = (...args) => spawnSync(process.execPath, ['scripts/preflight.mjs', ...args], { env, encoding: 'utf8' });
+  const ok = run(`--wallet=${EVM}`, `--creator=${CREATOR}`);
+  assert.equal(ok.status, 2);
+  assert.match(ok.stderr, /AURORA_API_KEY is not set/);
+  const bad = run(`--wallet=${EVM}`);
+  assert.equal(bad.status, 2);
+  assert.match(bad.stderr, /usage:/);
+});
