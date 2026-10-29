@@ -41,6 +41,7 @@ test('quote request: exact fields for "Base ETH -> USDC on Solana", refund on or
   assert.equal(call.body.appFees, undefined, 'fee is 0: no appFees at all');
   assert.equal(q.depositAddress, '0xDEPOSIT00000000000000000000000000000001');
   assert.equal(q.sendAmount, '0.001');
+  assert.equal(q.sendAmountUsd, '2.30');
   assert.equal(q.minAmount, '0.00099');
   assert.equal(q.receiveUsdc, '2');
   assert.match(q.requirements, /Send only ETH on the Base network/);
@@ -413,4 +414,13 @@ test('incident: a Solana-side pause stops quoting; a token-scope incident hides 
   const base = (await b.routes()).chains.find((c) => c.key === 'base');
   assert.deepEqual(base.tokens.map((t) => t.symbol), ['USDC']);
   await rejects(b.createTip(goodTip()), 'chain_paused');
+});
+
+test('sendAmountUsd is shown in cents, not Aurora\'s 12 decimals', async () => {
+  reset();
+  fake.quoteOver = { amountInUsd: '1.039478960000' };
+  assert.equal((await makeService(fake).service.createTip(goodTip())).sendAmountUsd, '1.04');
+  reset();
+  fake.quoteOver = { amountInUsd: undefined };
+  assert.equal((await makeService(fake).service.createTip(goodTip())).sendAmountUsd, null);
 });

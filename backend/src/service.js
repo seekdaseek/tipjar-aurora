@@ -38,6 +38,8 @@ const earlier = (requested, quoted) => {
   return a <= b ? requested : quoted;
 };
 
+// Aurora prices in USD with 12 decimals; the screen shows cents.
+const usd2 = (v) => (v != null && v !== '' && Number.isFinite(Number(v)) ? Number(v).toFixed(2) : null);
 const chainIncident = (list, slug) => list.find((i) => i.scopeType === 'chain' && i.scopeValue === slug);
 const tokenIncident = (list, assetId) => list.find((i) => i.scopeType === 'token' && i.scopeValue === assetId);
 // Aurora's Shield incidents. A withdrawal pause on the origin chain stalls a refund there, so the chain is not offered.
@@ -236,7 +238,7 @@ export class TipService {
       chainLabel: c.label,
       symbol: sym,
       sendAmount: q.amountInFormatted ?? fmt(rec.amountIn),
-      sendAmountUsd: q.amountInUsd ?? null,
+      sendAmountUsd: usd2(q.amountInUsd),
       minAmount: minIn,
       maxAmount: maxIn,
       receiveUsdc: formatMinor(big(rec.amountOutMinor), DEST.decimals),
