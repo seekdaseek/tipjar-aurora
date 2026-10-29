@@ -3,7 +3,7 @@ import {createRoot} from 'react-dom/client';
 import {View, Text} from 'react-native';
 import Screen from '../src/screens/AnyChainTipScreen';
 import TipReceipt from '../src/screens/TipReceipt';
-import {parseTipHash} from '../src/anyChain/permalink';
+import {useTipAddress} from '../src/anyChain/permalink';
 
 // Same screen component the Android app uses; only the page chrome around it is web-specific.
 const nav = {popToTop: () => window.location.reload(), navigate() {}};
@@ -12,12 +12,7 @@ const link = {color: '#C4B5FD', textDecorationLine: 'underline'};
 
 // #tip=<deposit address> opens a read-only receipt for that tip; anything else is the tip form.
 function Body() {
-  const [addr, setAddr] = React.useState(() => parseTipHash(window.location.hash));
-  React.useEffect(() => {
-    const on = () => setAddr(parseTipHash(window.location.hash));
-    window.addEventListener('hashchange', on);
-    return () => window.removeEventListener('hashchange', on);
-  }, []);
+  const addr = useTipAddress(window);
   if (addr) return <TipReceipt address={addr} onBack={() => { window.location.hash = ''; }} />;
   return <Screen navigation={nav} route={route} />;
 }
