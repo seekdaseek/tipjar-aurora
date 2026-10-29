@@ -67,3 +67,8 @@ yarn-error.log
 
 # Firebase web config (real values stay local)
 firebase.config.ts
+
+# backend runtime
+backend/data/
+backend/.env
+.env

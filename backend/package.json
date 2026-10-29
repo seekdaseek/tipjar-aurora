@@ -1,0 +1,12 @@
+{
+  "name": "tipjar-aurora-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Tip Jar: tip from any chain. Holds the Aurora Intents API key and turns Swap API quotes into USDC in the creator's Solana wallet.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "node --test \"test/*.test.js\""
+  }
+}
