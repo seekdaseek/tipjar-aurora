@@ -72,3 +72,7 @@ firebase.config.ts
 backend/data/
 backend/.env
 .env
+
+# web build
+web/node_modules/
+web/dist/

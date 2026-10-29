@@ -1,0 +1,14 @@
+{
+  "name": "tipjar-web",
+  "private": true,
+  "type": "module",
+  "description": "Static web build of the Tip from any chain screen (same TSX source as the app, via react-native-web).",
+  "scripts": { "build": "node build.mjs" },
+  "dependencies": {
+    "qrcode": "1.5.4",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-native-web": "0.19.13"
+  },
+  "devDependencies": { "esbuild": "0.25.10" }
+}

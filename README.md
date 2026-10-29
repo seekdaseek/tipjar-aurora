@@ -86,7 +86,14 @@ npm run android
 npx jest __tests__/stages.test.ts
 ```
 
-Deploying the backend: [docs/DEPLOY.md](docs/DEPLOY.md). Aurora endpoints, fields and limits: [docs/AURORA-NOTES.md](docs/AURORA-NOTES.md).
+Web build (the same `AnyChainTipScreen.tsx`, rendered with react-native-web; static files, no server process):
+
+```bash
+cd web && npm install
+TIPS_API=https://<your backend origin> npm run build   # writes web/dist/index.html + app.js
+```
+
+Deploying the backend and hosting the web build: [docs/DEPLOY.md](docs/DEPLOY.md). Aurora endpoints, fields and limits: [docs/AURORA-NOTES.md](docs/AURORA-NOTES.md).
 
 ## Security notes
 

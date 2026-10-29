@@ -66,3 +66,15 @@ Expect 0 restarts and well under 150 MB.
 ssh "$VPS" 'pm2 delete tipjar-aurora tipjar-aurora-tunnel; pm2 save'
 ```
 Everything else is untouched; `/opt/tipjar-aurora` can stay or be removed.
+
+## Static web build (no server process)
+
+The web build is two static files (`web/dist/index.html`, `web/dist/app.js`). Any static host works; the backend origin is baked
+in at build time and the page's Content-Security-Policy only allows connections to that origin.
+
+```bash
+cd web && npm install && TIPS_API=https://tips.ochinimus.app npm run build
+```
+Host `web/dist/` on a static host (for example a Cloudflare Pages direct-upload project: upload the two files). Deploy it only
+after `/health` and `/api/routes` on the backend answer, since the page shows a "no connection" message without it. The backend
+already sends `access-control-allow-origin: *`, so the static host's origin needs no allow-list.

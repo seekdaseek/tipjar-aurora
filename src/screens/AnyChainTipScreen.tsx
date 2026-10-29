@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, ActivityIndicator, Linking, Share} from 'react-native';
+import {View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, ActivityIndicator, Linking} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RouteProp} from '@react-navigation/native';
@@ -7,6 +7,7 @@ import {RootStackParamList} from '../../App';
 import {ApiError, Quote, RouteChain, Routes, TipStatus, createTip, getRoutes, getStatus} from '../anyChain/api';
 import {isAmount, isHttps, isStable, isTerminal, minutesLeft, shortHash, stepStates, StepState} from '../anyChain/stages';
 import QrCode from '../anyChain/QrCode';
+import {shareAddress} from '../anyChain/shareAddress';
 
 type Props = {navigation: NativeStackNavigationProp<RootStackParamList, 'AnyChain'>; route: RouteProp<RootStackParamList, 'AnyChain'>};
 const AMOUNTS = ['1', '2', '5', '10', '25'];
@@ -26,6 +27,7 @@ export default function AnyChainTipScreen({navigation, route}: Props) {
   const [status, setStatus] = useState<TipStatus | null>(null);
   const [pollErr, setPollErr] = useState('');
   const [now, setNow] = useState(Date.now());
+  const [copied, setCopied] = useState(false);
   const stopped = useRef(false);
 
   const loadRoutes = useCallback(() => {
@@ -95,8 +97,8 @@ export default function AnyChainTipScreen({navigation, route}: Props) {
                 <QrCode value={quote.qr} />
                 <Text selectable style={s.addr}>{quote.depositAddress}</Text>
                 {quote.depositMemo ? <Text style={s.memo}>Memo (required): {quote.depositMemo}</Text> : null}
-                <TouchableOpacity style={s.shareBtn} onPress={() => Share.share({message: quote.depositAddress}).catch(() => {})}>
-                  <Text style={s.shareText}>Copy / share address</Text>
+                <TouchableOpacity style={s.shareBtn} onPress={() => { shareAddress(quote.depositAddress).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {}); }}>
+                  <Text style={s.shareText}>{copied ? 'Copied ✓' : 'Copy / share address'}</Text>
                 </TouchableOpacity>
               </View>
               <View style={s.reqCard}>
