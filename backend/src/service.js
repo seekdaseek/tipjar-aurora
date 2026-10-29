@@ -26,6 +26,16 @@ const big = (v) => {
   }
 };
 
+// Aurora's quote.deadline came back exactly 72 h later than the deadline we requested (observed 2026-10-29,
+// unexplained, and whether a deposit after the requested time is honoured is untested). Show the earlier one.
+const earlier = (requested, quoted) => {
+  const a = Date.parse(requested);
+  const b = Date.parse(quoted);
+  if (!Number.isFinite(b)) return requested;
+  if (!Number.isFinite(a)) return quoted;
+  return a <= b ? requested : quoted;
+};
+
 export class TipService {
   constructor({ aurora, store, config, solana, registry, now = Date.now }) {
     this.aurora = aurora;
@@ -156,7 +166,7 @@ export class TipService {
       amountIn: q.amountIn,
       minAmountIn: q.minAmountIn,
       maxAmountIn: q.maxAmountIn ?? null,
-      deadline: q.deadline ?? deadline,
+      deadline: earlier(deadline, q.deadline),
       timeEstimate: q.timeEstimate ?? null,
       correlationId: res.correlationId ?? null,
     });

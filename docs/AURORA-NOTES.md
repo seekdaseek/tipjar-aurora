@@ -141,6 +141,10 @@ Individual user cases go through https://aurora.dev/intents-support with the tra
 
 1. That `EXACT_OUTPUT` quotes return a `depositAddress` for every origin asset we list.
 2. That the Solana recipient needs an existing USDC token account (the backend checks it before quoting; if Aurora creates it, the check can be relaxed).
-3. The real `deadline` default and `timeEstimate` per chain.
+3. The real `deadline` default and `timeEstimate` per chain. Observed 2026-10-29 for Base USDC (request `deadline` = now + 30 min):
+   the quote response carried `deadline` and `timeWhenInactive` exactly 72 h after the requested time, while `quoteRequest.deadline`
+   (visible in `/api/status`) kept the requested one. The 72 h is unexplained and undocumented, and dry quotes return no deadline,
+   so it could not be probed that way. Whether a deposit landing after the requested time (but before the quoted one) is honoured is
+   untested. The backend therefore reports the earlier of the two and the app counts down to it.
 4. `originChainTxHashes` fills in once the deposit is detected; its timing relative to `KNOWN_DEPOSIT_TX`.
 5. Whether `/api/tokens` exposes every chain in section "Asset IDs" for our key.

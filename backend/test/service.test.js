@@ -45,6 +45,19 @@ test('quote request: exact fields for "Base ETH -> USDC on Solana", refund on or
   assert.match(q.requirements, /Minimum tip from Base: \$1/);
 });
 
+test('deadline: the earlier of the requested and the quoted one is shown (Aurora returned +72 h)', async () => {
+  reset();
+  const { service } = makeService(fake);
+  fake.quoteOver = { deadline: '2026-11-02T10:30:00.000Z', timeWhenInactive: '2026-11-02T10:30:00.000Z' };
+  assert.equal((await service.createTip(goodTip())).deadline, '2026-10-30T10:30:00.000Z');
+  reset();
+  fake.quoteOver = { deadline: '2026-10-30T10:10:00.000Z' }; // an earlier quoted deadline also wins
+  assert.equal((await service.createTip(goodTip())).deadline, '2026-10-30T10:10:00.000Z');
+  reset();
+  fake.quoteOver = { deadline: undefined }; // none quoted: keep the requested one
+  assert.equal((await service.createTip(goodTip())).deadline, '2026-10-30T10:30:00.000Z');
+});
+
 test('integrator fee is only sent when configured', async () => {
   reset();
   const { service } = makeService(fake, { config: { feeBps: 10, feeRecipient: 'creatorplatform.near' } });
