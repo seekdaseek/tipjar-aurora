@@ -186,8 +186,10 @@ export class TipService {
       qr: c.key === 'btc' && q.amountInFormatted ? `bitcoin:${rec.depositAddress}?amount=${q.amountInFormatted}` : rec.depositAddress,
       requirements:
         `Send only ${sym} on the ${c.label} network to this address.${mem} ` +
-        `Send ${q.amountInFormatted ?? fmt(rec.amountIn)} ${sym}` +
-        (minIn ? ` (anything from ${minIn} up${maxIn ? ' to ' + maxIn : ''} works; more than the maximum is refunded)` : '') +
+        (rec.swapType === 'EXACT_INPUT'
+          ? `Send exactly ${q.amountInFormatted ?? fmt(rec.amountIn)} ${sym}`
+          : `Send ${q.amountInFormatted ?? fmt(rec.amountIn)} ${sym}` +
+            (minIn ? ` (anything from ${minIn} up${maxIn ? ' to ' + maxIn : ''} works; more than the maximum is refunded)` : '')) +
         `. Minimum tip from ${c.label}: $${c.minUsd}. Another asset or another network may be lost.`,
       refundTo: rec.refundTo,
       supportUrl: SUPPORT_URL,

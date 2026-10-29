@@ -321,6 +321,8 @@ test('sendExact: Base USDC 1.04 -> EXACT_INPUT in origin units, refund to the sa
   assert.equal(body.recipient, CREATOR);
   assert.equal(q.sendAmount, '1.04');
   assert.equal(q.receiveUsdc, '1.039');
+  assert.match(q.requirements, /Send exactly 1\.04 USDC\. Minimum tip from Base: \$1/);
+  assert.doesNotMatch(q.requirements, /maximum/);
 });
 
 test('sendExact is refused for volatile tokens and still enforces the minimum', async () => {

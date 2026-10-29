@@ -94,9 +94,11 @@ Deploying the backend: [docs/DEPLOY.md](docs/DEPLOY.md). Aurora endpoints, field
   segment on Aurora's API, so upstream URLs are never put in messages). Tests assert this.
 - The backend only quotes for wallets in the Tip Jar creator registry, caps tips at $50, and rate limits per device, so
   it cannot be used as a free generic swap relay on our key.
-- Firebase: `database.rules.json` makes the creator registry create-only with validated fields, so existing creators
-  cannot be edited or deleted from a client (otherwise anyone could redirect a creator's tips to their own wallet).
-  Deploy it in the Firebase console (Realtime Database, Rules). Open registration is still open by design.
+- Firebase: the creator registry is public-read and create-only (a creator can be added but not edited or deleted from a
+  client), with every field validated and everything else locked; this was read from the Firebase console on 2026-10-29.
+  Without that, anyone could redirect a creator's tips to their own wallet. `database.rules.json` is a reference copy of the
+  intended rules, not a verified copy of what is deployed. Open registration is still open by design, so a duplicate or
+  impersonating creator can be added; that needs moderation or sign-in, not rules.
 
 ## Limits, stated plainly
 
