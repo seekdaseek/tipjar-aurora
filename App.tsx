@@ -6,11 +6,13 @@ import HomeScreen from './src/screens/HomeScreen';
 import TipScreen from './src/screens/TipScreen';
 import SuccessScreen from './src/screens/SuccessScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
+import AnyChainTipScreen from './src/screens/AnyChainTipScreen';
 export type RootStackParamList = {
   Home: undefined;
   Tip: {name:string;wallet:string;color:string;category:string};
   Success: {amount:string;creatorName:string};
   Register: undefined;
+  AnyChain: {name:string;wallet:string;color:string};
 };
 const Stack = createNativeStackNavigator<RootStackParamList>();
 export default function App() {
@@ -21,6 +23,7 @@ export default function App() {
           <Stack.Screen name="Home" component={HomeScreen} options={{headerShown:false}}/>
           <Stack.Screen name="Tip" component={TipScreen} options={{title:'Send a Tip'}}/>
           <Stack.Screen name="Success" component={SuccessScreen} options={{title:'🎉 Tip Sent!',headerBackVisible:false}}/>
+          <Stack.Screen name="AnyChain" component={AnyChainTipScreen} options={{title:'Tip from any chain'}}/>
           <Stack.Screen name="Register" component={RegisterScreen} options={{title:'Add Your Tip Jar'}}/>
         </Stack.Navigator>
       </NavigationContainer>

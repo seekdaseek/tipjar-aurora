@@ -29,6 +29,10 @@ export default function TipScreen({navigation,route}: Props) {
           <View style={[s.avatar,{backgroundColor:color}]}><Text style={s.avatarText}>{name[0]}</Text></View>
           <View><Text style={s.creatorName}>{name}</Text><Text style={s.creatorSub}>Scan to tip with any Solana wallet</Text></View>
         </View>
+        <TouchableOpacity style={s.magicBtn} onPress={()=>navigation.navigate('AnyChain',{name,wallet,color})}>
+          <Text style={s.magicBtnEmoji}>🌐</Text>
+          <View style={{flex:1}}><Text style={s.magicBtnTitle}>Tip from any chain</Text><Text style={s.magicBtnSub}>Pay with ETH, BTC, USDC on Base and more. {name} gets USDC on Solana.</Text></View>
+        </TouchableOpacity>
         <Text style={s.sectionLabel}>Choose amount</Text>
         <View style={s.amountGrid}>
           {AMOUNTS.map(a=>(
