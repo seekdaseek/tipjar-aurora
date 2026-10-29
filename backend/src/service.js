@@ -1,5 +1,5 @@
 import { ADDRESS_CHECKS, formatMinor, isSolanaAddress, usdToMinor } from './validate.js';
-import { buildRoutes, FAMILY_HINT, DEST } from './routes.js';
+import { buildRoutes, CHAINS, FAMILY_HINT, DEST } from './routes.js';
 import { txLinks } from './explorers.js';
 
 export const SUPPORT_URL = 'https://aurora.dev/intents-support';
@@ -35,6 +35,8 @@ const earlier = (requested, quoted) => {
 
 // Aurora prices in USD with 12 decimals; the screen shows cents.
 const usd2 = (v) => (v != null && v !== '' && Number.isFinite(Number(v)) ? Number(v).toFixed(2) : null);
+// A status link can be shared (the #tip= permalink), so the refund address is shown shortened.
+const maskAddr = (a) => (typeof a === 'string' && a.length > 16 ? a.slice(0, 8) + '…' + a.slice(-6) : a);
 const chainIncident = (list, slug) => list.find((i) => i.scopeType === 'chain' && i.scopeValue === slug);
 const tokenIncident = (list, assetId) => list.find((i) => i.scopeType === 'token' && i.scopeValue === assetId);
 // Aurora's Shield incidents. A withdrawal pause on the origin chain stalls a refund there, so the chain is not offered.
@@ -255,6 +257,7 @@ export class TipService {
   async tipStatus(depositAddress) {
     const rec = this.store.get(depositAddress);
     if (!rec) throw new TipError('unknown_tip', 'No tip with that deposit address.', 404);
+    depositAddress = rec.depositAddress; // canonical spelling (a lowercase permalink finds the same record)
     if (rec.final) return this.derive(rec.final.raw ?? null, rec);
 
     let entry = this.statusCache.get(depositAddress);
@@ -337,9 +340,9 @@ export class TipService {
           amount: d.refundedAmountFormatted ?? null,
           amountUsd: d.refundedAmountUsd ?? null,
           reason: d.refundReason ?? null,
-          to: rec.refundTo,
+          to: maskAddr(rec.refundTo),
         };
-        message = `Refunded${refund.amount ? ' ' + refund.amount + ' ' + sym : ''} to ${rec.refundTo}${refund.reason ? ` (${refund.reason})` : ''}.`;
+        message = `Refunded${refund.amount ? ' ' + refund.amount + ' ' + sym : ''} to ${maskAddr(rec.refundTo)}${refund.reason ? ` (${refund.reason})` : ''}.`;
         break;
       case 'FAILED':
         stage = 'failed';
@@ -351,6 +354,7 @@ export class TipService {
     }
     return {
       depositAddress: rec.depositAddress,
+      route: { chain: rec.chain, chainLabel: CHAINS.find((c) => c.key === rec.chain)?.label ?? rec.chain, symbol: rec.symbol, creator: rec.creatorWallet },
       stage,
       auroraStatus: status,
       updatedAt: raw?.updatedAt ?? null,

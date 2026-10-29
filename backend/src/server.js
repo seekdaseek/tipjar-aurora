@@ -28,9 +28,10 @@ const send = (res, code, obj) => {
   res.end(body);
 };
 
-export function createApp({ service, trustProxy = false, now = Date.now, startedAt = Date.now(), tipLimit = 20, statusLimit = 120 }) {
+export function createApp({ service, trustProxy = false, now = Date.now, startedAt = Date.now(), tipLimit = 20, statusLimit = 120, missLimit = 20 }) {
   const tipLimiter = new Limiter(tipLimit, 60_000, now); // quotes per minute per client
   const statusLimiter = new Limiter(statusLimit, 60_000, now);
+  const missLimiter = new Limiter(missLimit, 60_000, now); // lookups of addresses we never issued: stops guessing at a public permalink
   const clientKey = (req) => (trustProxy && (req.headers['cf-connecting-ip'] || String(req.headers['x-forwarded-for'] || '').split(',')[0].trim())) || req.socket.remoteAddress || 'unknown';
 
   const readJson = (req) =>
@@ -69,7 +70,13 @@ export function createApp({ service, trustProxy = false, now = Date.now, started
       const m = url.pathname.match(/^\/api\/tip\/([A-Za-z0-9._:-]{8,128})$/);
       if (req.method === 'GET' && m) {
         if (!statusLimiter.allow(key)) return send(res, 429, { error: { code: 'rate_limited', message: 'Slow down.' } });
-        return send(res, 200, await service.tipStatus(m[1]));
+        try {
+          return send(res, 200, await service.tipStatus(m[1]));
+        } catch (e) {
+          if (e instanceof TipError && e.code === 'unknown_tip' && !missLimiter.allow(key))
+            return send(res, 429, { error: { code: 'rate_limited', message: 'Too many unknown addresses. Wait a minute.' } });
+          throw e;
+        }
       }
       return send(res, 404, { error: { code: 'not_found', message: 'Not found.' } });
     } catch (e) {

@@ -5,7 +5,8 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RouteProp} from '@react-navigation/native';
 import {RootStackParamList} from '../../App';
 import {ApiError, Quote, RouteChain, Routes, TipStatus, createTip, getRoutes, getStatus} from '../anyChain/api';
-import {isAmount, isHttps, isStable, isTerminal, minutesLeft, shortHash, stepStates, StepState} from '../anyChain/stages';
+import {isAmount, isHttps, isStable, isTerminal, minutesLeft, shortHash} from '../anyChain/stages';
+import StatusCard from '../anyChain/StatusCard';
 import QrCode from '../anyChain/QrCode';
 import {shareAddress} from '../anyChain/shareAddress';
 
@@ -82,7 +83,6 @@ export default function AnyChainTipScreen({navigation, route}: Props) {
 
   // ---------- step 2: deposit + live tracking ----------
   if (quote) {
-    const steps = stepStates(status);
     const stage = status?.stage ?? 'waiting';
     const waiting = stage === 'waiting' || stage === 'incomplete';
     const mins = minutesLeft(quote.deadline, now);
@@ -109,31 +109,7 @@ export default function AnyChainTipScreen({navigation, route}: Props) {
             </>
           )}
 
-          <Text style={s.section}>Progress</Text>
-          <Step state={steps[0]} text={stage === 'incomplete' ? 'Deposit incomplete' : 'Waiting for your deposit'} />
-          <Step state={steps[1]} text={stage === 'seen' ? 'Deposit seen, confirming' : 'Received'} />
-          <Step state={steps[2]} text={`Arrived in ${name}'s wallet`} />
-          {status && <Text style={[s.msg, (stage === 'failed' || stage === 'expired') && s.msgBad]}>{status.message}</Text>}
-          {pollErr ? <Text style={s.poll}>Connection hiccup, retrying. Your tip is safe.</Text> : null}
-
-          {status && (status.links.origin.length > 0 || status.links.destination.length > 0) && (
-            <View style={s.linksCard}>
-              <Text style={s.reqTitle}>Proof</Text>
-              {status.links.origin.map(l => <LinkRow key={l.url} label={`Your tip on ${quote.chainLabel}`} hash={l.hash} onPress={() => open(l.url)} />)}
-              {status.links.destination.map(l => <LinkRow key={l.url} label="Arrival on Solana" hash={l.hash} onPress={() => open(l.url)} />)}
-            </View>
-          )}
-          {status?.refund && (
-            <View style={s.refundCard}>
-              <Text style={s.refundTitle}>Refunded</Text>
-              <Text style={s.reqText}>{status.refund.amount ? `${status.refund.amount} ${quote.symbol}` : 'Your deposit'} was returned to {status.refund.to}{status.refund.reason ? ` (${status.refund.reason})` : ''}.</Text>
-            </View>
-          )}
-          {status?.supportUrl && (
-            <TouchableOpacity onPress={() => open(status.supportUrl!)}>
-              <Text style={s.support}>Something wrong? Contact Aurora support with this deposit address →</Text>
-            </TouchableOpacity>
-          )}
+          <StatusCard status={status} name={name} chainLabel={quote.chainLabel} symbol={quote.symbol} pollErr={!!pollErr} onOpen={open} />
 
           {isTerminal(stage) && (
             <TouchableOpacity style={s.primary} onPress={() => navigation.popToTop()}>
@@ -214,19 +190,6 @@ export default function AnyChainTipScreen({navigation, route}: Props) {
 const Chip = ({label, on, onPress}: {label: string; on: boolean; onPress: () => void}) => (
   <TouchableOpacity style={[s.chip, on && s.chipOn]} onPress={onPress}><Text style={[s.chipText, on && s.chipTextOn]}>{label}</Text></TouchableOpacity>
 );
-const MARK: Record<StepState, string> = {todo: '○', active: '◔', done: '✓', bad: '✕'};
-const Step = ({state, text}: {state: StepState; text: string}) => (
-  <View style={s.step}>
-    <Text style={[s.mark, state === 'done' && s.markDone, state === 'bad' && s.markBad, state === 'active' && s.markActive]}>{MARK[state]}</Text>
-    <Text style={[s.stepText, state === 'todo' && s.stepTodo]}>{text}</Text>
-  </View>
-);
-const LinkRow = ({label, hash, onPress}: {label: string; hash: string; onPress: () => void}) => (
-  <TouchableOpacity style={s.linkRow} onPress={onPress}>
-    <Text style={s.linkLabel}>{label}</Text><Text style={s.linkHash}>{shortHash(hash)} ↗</Text>
-  </TouchableOpacity>
-);
-
 const s = StyleSheet.create({
   container: {flex: 1, backgroundColor: '#0A0A14'},
   scroll: {padding: 20, paddingBottom: 48},
@@ -257,17 +220,5 @@ const s = StyleSheet.create({
   reqCard: {backgroundColor: '#1a1200', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#C9A84C', marginBottom: 6},
   reqTitle: {color: '#E8C454', fontSize: 13, fontWeight: '700', marginBottom: 6},
   reqText: {color: '#D1D5DB', fontSize: 13, lineHeight: 19, marginTop: 4},
-  step: {flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10},
-  mark: {width: 24, textAlign: 'center', color: '#6B7280', fontSize: 18},
-  markDone: {color: '#34D399'}, markBad: {color: '#F87171'}, markActive: {color: '#C4B5FD'},
-  stepText: {color: '#F9FAFB', fontSize: 15, flex: 1}, stepTodo: {color: '#4B5563'},
-  msg: {color: '#9CA3AF', fontSize: 13, lineHeight: 19, marginTop: 6},
   msgBad: {color: '#F87171', fontSize: 13, lineHeight: 19, marginTop: 10},
-  poll: {color: '#6B7280', fontSize: 12, marginTop: 8},
-  linksCard: {backgroundColor: '#131320', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#1E1E30', marginTop: 16},
-  linkRow: {flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8},
-  linkLabel: {color: '#D1D5DB', fontSize: 13}, linkHash: {color: '#C4B5FD', fontSize: 13, fontFamily: 'monospace'},
-  refundCard: {backgroundColor: '#1f1014', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#7f1d1d', marginTop: 16},
-  refundTitle: {color: '#FCA5A5', fontSize: 14, fontWeight: '700'},
-  support: {color: '#9CA3AF', fontSize: 12, marginTop: 16, textDecorationLine: 'underline'},
 });

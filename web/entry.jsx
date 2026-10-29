@@ -2,11 +2,25 @@ import React from 'react';
 import {createRoot} from 'react-dom/client';
 import {View, Text} from 'react-native';
 import Screen from '../src/screens/AnyChainTipScreen';
+import TipReceipt from '../src/screens/TipReceipt';
+import {parseTipHash} from '../src/anyChain/permalink';
 
 // Same screen component the Android app uses; only the page chrome around it is web-specific.
 const nav = {popToTop: () => window.location.reload(), navigate() {}};
 const route = {params: {name: 'Nimus', wallet: '4a8o45skRPcyjAdyR8yES215Swvh8uTpZD6KLarhxCJ7', color: '#C9A84C'}};
 const link = {color: '#C4B5FD', textDecorationLine: 'underline'};
+
+// #tip=<deposit address> opens a read-only receipt for that tip; anything else is the tip form.
+function Body() {
+  const [addr, setAddr] = React.useState(() => parseTipHash(window.location.hash));
+  React.useEffect(() => {
+    const on = () => setAddr(parseTipHash(window.location.hash));
+    window.addEventListener('hashchange', on);
+    return () => window.removeEventListener('hashchange', on);
+  }, []);
+  if (addr) return <TipReceipt address={addr} onBack={() => { window.location.hash = ''; }} />;
+  return <Screen navigation={nav} route={route} />;
+}
 
 createRoot(document.getElementById('root')).render(
   <View style={{flex: 1, alignItems: 'center', backgroundColor: '#0A0A14'}}>
@@ -20,7 +34,7 @@ createRoot(document.getElementById('root')).render(
           </Text>
         </View>
       </View>
-      <Screen navigation={nav} route={route} />
+      <Body />
       <View style={{padding: 12}}>
         <Text style={{color: '#6B7280', fontSize: 11, textAlign: 'center', lineHeight: 17}}>
           Encode Solana Hackathon 2026, Aurora Intents track. Routed by Aurora Intents (NEAR Intents) Swap API.{' '}

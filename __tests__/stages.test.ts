@@ -48,3 +48,20 @@ describe('amount rules', () => {
     for (const s of ['ETH', 'BTC', 'TRX', 'NEAR']) expect(isStable(s)).toBe(false);
   });
 });
+
+import {parseTipHash, tipHash} from '../src/anyChain/permalink';
+
+describe('permalink (#tip=<deposit address>)', () => {
+  it('reads a deposit address of any chain family, and round-trips', () => {
+    const a = '0xbfa9D9C3457AcAa0F755c79631758673DbC7b00A';
+    expect(parseTipHash('#tip=' + a)).toBe(a);
+    expect(parseTipHash(tipHash(a))).toBe(a);
+    expect(parseTipHash('#tip=bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq')).toBe('bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq');
+    expect(parseTipHash('#tip=alice.near')).toBe('alice.near');
+  });
+  it('rejects anything else: empty, short, long, odd characters, extra params, other keys', () => {
+    for (const h of ['', '#', '#tip=', '#tip=abc', '#tip=' + 'x'.repeat(129), '#tip=0x12 34567890', '#tip=<script>alert(1)</script>', '#tip=0xabcdef01&x=1', '#other=0xbfa9D9C3457AcAa0', 'tip=0xbfa9D9C3457AcAa0', '#tip=../../etc/passwd']) {
+      expect(parseTipHash(h)).toBeNull();
+    }
+  });
+});

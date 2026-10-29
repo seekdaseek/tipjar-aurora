@@ -199,8 +199,9 @@ test('status: refund is shown with amount, reason, destination, and a support li
   ]);
   const s = await service.tipStatus(q.depositAddress);
   assert.equal(s.stage, 'refunded');
-  assert.deepEqual(s.refund, { amount: '0.00099', amountUsd: '2.27', reason: 'PARTIAL_DEPOSIT', to: EVM });
-  assert.match(s.message, /Refunded 0\.00099 ETH to 0xA11CE/);
+  assert.deepEqual(s.refund, { amount: '0.00099', amountUsd: '2.27', reason: 'PARTIAL_DEPOSIT', to: '0xA11CE0…000B01' }); // shortened: a status link can be shared
+  assert.match(s.message, /Refunded 0\.00099 ETH to 0xA11CE0…000B01 \(PARTIAL_DEPOSIT\)\./);
+  assert.ok(!JSON.stringify(s).includes(EVM), 'the full refund address is not in the public status');
   assert.equal(s.steps.arrived, false);
   assert.equal(s.links.origin.length, 2);
   assert.equal(s.supportUrl, 'https://aurora.dev/intents-support');

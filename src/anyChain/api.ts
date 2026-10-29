@@ -14,7 +14,7 @@ export type Quote = {
 export type Stage = 'waiting' | 'seen' | 'received' | 'arrived' | 'incomplete' | 'refunded' | 'failed' | 'expired';
 export type Link = {hash: string; url: string};
 export type TipStatus = {
-  depositAddress: string; stage: Stage; auroraStatus: string; message: string;
+  depositAddress: string; route: {chain: string; chainLabel: string; symbol: string; creator: string}; stage: Stage; auroraStatus: string; message: string;
   steps: {received: boolean; arrived: boolean};
   amounts: {deposited: string | null; delivered: string | null; deliveredUsd: string | null};
   links: {origin: Link[]; destination: Link[]};
