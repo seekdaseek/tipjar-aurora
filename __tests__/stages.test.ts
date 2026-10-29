@@ -35,3 +35,16 @@ describe('helpers', () => {
     expect(shortHash('short')).toBe('short');
   });
 });
+
+describe('amount rules', () => {
+  const {isAmount, isStable} = require('../src/anyChain/stages');
+  it('accepts plain decimals only, like the backend', () => {
+    for (const ok of ['1', '1.04', '0.5', '25']) expect(isAmount(ok)).toBe(true);
+    for (const bad of ['', '-1', '1e3', '1,04', ' 1', '1.', '.5', '1.1234567']) expect(isAmount(bad)).toBe(false);
+  });
+  it('only stablecoins are send-exact', () => {
+    expect(isStable('USDC')).toBe(true);
+    expect(isStable('USDT')).toBe(true);
+    for (const s of ['ETH', 'BTC', 'TRX', 'NEAR']) expect(isStable(s)).toBe(false);
+  });
+});

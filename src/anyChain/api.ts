@@ -41,6 +41,6 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const getRoutes = () => call<Routes>('/api/routes');
-export const createTip = (b: {chain: string; symbol: string; amountUsd: string; refundTo: string; creatorWallet: string}) =>
+export const createTip = (b: {chain: string; symbol: string; amountUsd: string; refundTo: string; creatorWallet: string; sendExact?: boolean}) =>
   call<Quote>('/api/tip', {method: 'POST', body: JSON.stringify(b)});
 export const getStatus = (depositAddress: string) => call<TipStatus>('/api/tip/' + encodeURIComponent(depositAddress));

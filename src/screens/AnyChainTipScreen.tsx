@@ -5,7 +5,7 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {RouteProp} from '@react-navigation/native';
 import {RootStackParamList} from '../../App';
 import {ApiError, Quote, RouteChain, Routes, TipStatus, createTip, getRoutes, getStatus} from '../anyChain/api';
-import {isHttps, isTerminal, minutesLeft, shortHash, stepStates, StepState} from '../anyChain/stages';
+import {isAmount, isHttps, isStable, isTerminal, minutesLeft, shortHash, stepStates, StepState} from '../anyChain/stages';
 import QrCode from '../anyChain/QrCode';
 
 type Props = {navigation: NativeStackNavigationProp<RootStackParamList, 'AnyChain'>; route: RouteProp<RootStackParamList, 'AnyChain'>};
@@ -44,7 +44,8 @@ export default function AnyChainTipScreen({navigation, route}: Props) {
   const family = chain?.family ?? 'evm';
   const refundTo = (refund[family] ?? '').trim();
   const minUsd = chain?.minUsd ?? 1;
-  const amountOk = Number(amount) >= minUsd;
+  const amountOk = isAmount(amount) && Number(amount) >= minUsd && Number(amount) <= (routes?.maxTipUsd ?? 50);
+  const sendExact = isStable(symbol);
 
   const pickChain = (c: RouteChain) => { setChainKey(c.key); setSymbol(c.tokens[0].symbol); setErr(''); if (Number(amount) < c.minUsd) setAmount(String(c.minUsd)); };
 
@@ -52,7 +53,7 @@ export default function AnyChainTipScreen({navigation, route}: Props) {
     if (!chain || busy) return;
     setBusy(true); setErr('');
     try {
-      setQuote(await createTip({chain: chain.key, symbol, amountUsd: amount, refundTo, creatorWallet: wallet}));
+      setQuote(await createTip({chain: chain.key, symbol, amountUsd: amount, refundTo, creatorWallet: wallet, sendExact}));
     } catch (e: any) { setErr(e.message ?? 'Something went wrong.'); }
     finally { setBusy(false); }
   };
@@ -177,11 +178,17 @@ export default function AnyChainTipScreen({navigation, route}: Props) {
               </>
             )}
 
-            <Text style={s.section}>{name} receives</Text>
+            <Text style={s.section}>{sendExact ? `You send (${symbol})` : `${name} receives`}</Text>
             <View style={s.chips}>
               {AMOUNTS.filter(a => Number(a) >= minUsd && Number(a) <= routes.maxTipUsd).map(a => <Chip key={a} label={`$${a}`} on={a === amount} onPress={() => setAmount(a)} />)}
             </View>
-            <Text style={s.hint}>Minimum from {chain?.label}: ${minUsd}. Smaller deposits can get stuck.</Text>
+            <TextInput
+              style={[s.input, {marginTop: 10, fontFamily: undefined, fontSize: 15}]} value={amount} onChangeText={v => { setAmount(v.replace(',', '.')); setErr(''); }}
+              keyboardType="decimal-pad" placeholder="or type an amount" placeholderTextColor="#4B5563" accessibilityLabel="Tip amount"
+            />
+            <Text style={s.hint}>
+              {sendExact ? `${name} gets USDC on Solana, a little under what you send after network fees. ` : ''}Minimum from {chain?.label}: ${minUsd}. Smaller deposits can get stuck.
+            </Text>
 
             <Text style={s.section}>Your {chain?.label} address (for refunds)</Text>
             <TextInput

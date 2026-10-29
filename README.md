@@ -36,8 +36,9 @@ Tipper (phone)                Tip Jar backend                Aurora Swap API    
   received / arrived    <---- stage + both tx links -----                          (recipient = creator)
 ```
 
-- **Creator gets exactly the tip.** The quote is `EXACT_OUTPUT` in USDC on Solana, so the tipper is told how much of
-  their own token to send, and the creator receives the stated amount.
+- **Say what is fixed.** For volatile tokens (ETH, BTC, ...) the quote is `EXACT_OUTPUT` in USDC on Solana: the tipper is
+  told how much of their token to send and the creator receives the stated amount. For stablecoins (USDC, USDT) the tipper
+  states what they send (`EXACT_INPUT`) and the creator gets that minus network fees.
 - **How Solana powers it.** The destination is USDC on Solana: fast, cheap final settlement in the wallet the creator
   already uses. The backend checks the creator's wallet holds a USDC token account before it issues any deposit
   address, and the final proof link is a Solana explorer link.

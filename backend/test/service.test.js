@@ -301,3 +301,43 @@ test('CreatorRegistry reads wallets from the Firebase creators object and caches
   assert.equal(calls, 2);
   assert.equal(await new CreatorRegistry({ url: 'x', fetchImpl: async () => ({ ok: false }) }).isRegistered(CREATOR), null);
 });
+
+// ---- sendExact (EXACT_INPUT, stablecoins only): the first real tip is exactly 1.04 USDC from Base ----
+
+const BASE_USDC = 'nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near';
+const exactOver = (over = {}) => ({ amountIn: '1040000', amountInFormatted: '1.04', amountInUsd: '1.04', minAmountIn: '1040000', maxAmountIn: undefined, amountOut: '1039000', amountOutFormatted: '1.039', ...over });
+
+test('sendExact: Base USDC 1.04 -> EXACT_INPUT in origin units, refund to the same wallet, creator gets the quoted out', async () => {
+  reset();
+  fake.quoteOver = exactOver();
+  const { service } = makeService(fake);
+  const q = await service.createTip(goodTip({ symbol: 'USDC', amountUsd: '1.04', sendExact: true }));
+  const body = fake.requests.find((r) => r.path.startsWith('/api/quote')).body;
+  assert.equal(body.swapType, 'EXACT_INPUT');
+  assert.equal(body.amount, '1040000');
+  assert.equal(body.originAsset, BASE_USDC);
+  assert.equal(body.destinationAsset, SOL_USDC);
+  assert.equal(body.refundTo, EVM);
+  assert.equal(body.recipient, CREATOR);
+  assert.equal(q.sendAmount, '1.04');
+  assert.equal(q.receiveUsdc, '1.039');
+});
+
+test('sendExact is refused for volatile tokens and still enforces the minimum', async () => {
+  reset();
+  const { service } = makeService(fake);
+  await rejects(service.createTip(goodTip({ symbol: 'ETH', amountUsd: '2', sendExact: true })), 'send_exact_stable_only');
+  await rejects(service.createTip(goodTip({ symbol: 'USDC', amountUsd: '0.9', sendExact: true })), 'below_minimum');
+  assert.equal(fake.requests.filter((r) => r.path.startsWith('/api/quote')).length, 0);
+});
+
+test('sendExact: a quote that disagrees on the amount to send, or skims over 5%, is never shown', async () => {
+  reset();
+  const { service } = makeService(fake);
+  fake.quoteOver = exactOver({ amountIn: '1050000' });
+  await rejects(service.createTip(goodTip({ symbol: 'USDC', amountUsd: '1.04', sendExact: true })), 'bad_quote');
+  fake.quoteOver = exactOver({ amountOut: '900000' });
+  await rejects(service.createTip(goodTip({ symbol: 'USDC', amountUsd: '1.04', sendExact: true })), 'bad_quote');
+  fake.quoteOver = exactOver({ amountOut: '988000' }); // exactly the 95% boundary: allowed
+  await service.createTip(goodTip({ symbol: 'USDC', amountUsd: '1.04', sendExact: true }));
+});

@@ -66,13 +66,17 @@ export class TipService {
     };
   }
 
-  async createTip({ chain, symbol, amountUsd, refundTo, creatorWallet } = {}) {
+  async createTip({ chain, symbol, amountUsd, refundTo, creatorWallet, sendExact = false } = {}) {
     const { dest, chains } = buildRoutes(await this.#tokenList());
     if (!dest) throw new TipError('route_unavailable', 'USDC on Solana is not available right now.', 503);
     const c = chains.find((x) => x.key === chain);
     const tok = c?.offered.find((t) => t.symbol === symbol);
     if (!c || !tok) throw new TipError('unsupported_route', 'That chain or token is not supported.');
 
+    sendExact = sendExact === true;
+    // sendExact: the tipper sends exactly this amount (EXACT_INPUT). Only for stablecoins, where "$X" is also X tokens;
+    // for volatile tokens the creator-receives amount (EXACT_OUTPUT) is the only honest way to state a tip.
+    if (sendExact && !['USDC', 'USDT'].includes(tok.auroraSymbol)) throw new TipError('send_exact_stable_only', 'Sending an exact amount is only offered for USDC and USDT.');
     const outMinor = usdToMinor(amountUsd, DEST.decimals);
     if (outMinor === null) throw new TipError('bad_amount', 'Enter an amount like 2 or 2.50.');
     if (outMinor < usdToMinor(String(c.minUsd)))
@@ -96,14 +100,15 @@ export class TipService {
       if (has === null) throw new TipError('solana_unavailable', 'Could not check the creator wallet right now. Try again shortly.', 503);
     }
 
+    const amountMinor = sendExact ? usdToMinor(amountUsd, tok.decimals) : outMinor;
     const deadline = new Date(this.now() + c.deadlineMin * 60_000).toISOString();
     const body = {
       dry: false,
-      swapType: 'EXACT_OUTPUT',
+      swapType: sendExact ? 'EXACT_INPUT' : 'EXACT_OUTPUT',
       depositType: 'ORIGIN_CHAIN',
       originAsset: tok.assetId,
       destinationAsset: dest.assetId,
-      amount: outMinor.toString(),
+      amount: amountMinor.toString(),
       slippageTolerance: this.cfg.slippageBps,
       refundTo,
       refundType: 'ORIGIN_CHAIN',
@@ -128,7 +133,14 @@ export class TipService {
     if (!q?.depositAddress || req?.recipient !== creatorWallet || req?.refundTo !== refundTo)
       throw new TipError('bad_quote', 'Aurora returned an unusable quote. Nothing was charged. Try again.', 502);
     const outGot = big(q.amountOut);
-    if (outGot === null || outGot < outMinor) throw new TipError('bad_quote', 'The quote would pay the creator less than the tip. Nothing was charged. Try again.', 502);
+    if (sendExact) {
+      // We tell the tipper to send exactly amountMinor. Refuse a quote that disagrees, or that skims more than 5% on a stable-to-stable route.
+      const inGot = big(q.amountIn);
+      const floorOk = outGot !== null && outGot * 10n ** BigInt(tok.decimals) * 100n >= amountMinor * 10n ** BigInt(DEST.decimals) * 95n;
+      if (inGot !== amountMinor || !floorOk) throw new TipError('bad_quote', 'The quote does not match the amount you chose. Nothing was charged. Try again.', 502);
+    } else if (outGot === null || outGot < outMinor) {
+      throw new TipError('bad_quote', 'The quote would pay the creator less than the tip. Nothing was charged. Try again.', 502);
+    }
 
     const rec = this.store.addQuote({
       chain: c.key,
@@ -139,7 +151,8 @@ export class TipService {
       refundTo,
       depositAddress: q.depositAddress,
       depositMemo: q.depositMemo ?? null,
-      amountOutMinor: outMinor.toString(),
+      swapType: body.swapType,
+      amountOutMinor: (sendExact ? outGot : outMinor).toString(),
       amountIn: q.amountIn,
       minAmountIn: q.minAmountIn,
       maxAmountIn: q.maxAmountIn ?? null,

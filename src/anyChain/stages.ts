@@ -23,5 +23,11 @@ export function minutesLeft(deadline: string, now: number): number {
   return Number.isFinite(ms) ? Math.max(0, Math.ceil(ms / 60000)) : 0;
 }
 
+/** Stablecoins: the tipper states what they SEND (so "$X" is X tokens). Volatile tokens: what the creator RECEIVES. */
+export const isStable = (symbol: string) => symbol === 'USDC' || symbol === 'USDT';
+
+/** "1", "1.04", "0.5" -> true. Mirrors the backend rule (up to 6 digits, up to 6 decimals). */
+export const isAmount = (s: string) => /^\d{1,6}(\.\d{1,6})?$/.test(s);
+
 export const shortHash = (h: string) => (h.length > 16 ? h.slice(0, 8) + '…' + h.slice(-6) : h);
 export const isHttps = (u: string) => u.startsWith('https://');

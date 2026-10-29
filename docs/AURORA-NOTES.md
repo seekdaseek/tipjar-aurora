@@ -49,6 +49,7 @@ Every line marked UNVERIFIED must be confirmed by a real call before the demo.
 
 - `amount` is in the smallest unit; for `EXACT_OUTPUT` it is the USDC the creator receives (USDC has 6 decimals, so `2000000` = 2 USDC).
 - `slippageTolerance` is in basis points (100 = 1%).
+- **Send-exact mode (stablecoin origins only, e.g. Base USDC):** `swapType: "EXACT_INPUT"` with `amount` in the ORIGIN token's smallest unit (Base USDC has 6 decimals, so `1040000` = 1.04 USDC). The tipper sends exactly that and the creator receives the quoted `amountOut`. Used when the wallet has no headroom for `EXACT_OUTPUT` fees. The backend refuses a quote whose `amountIn` differs from what was asked, or whose `amountOut` is under 95% of the amount sent.
 - `deadline` optional: when refunds begin if the swap has not completed. A default applies if omitted.
 - `dry: true` prices without reserving a deposit address; the response then lacks `depositAddress`, `timeWhenInactive`, `deadline`.
 - `swapType` values: `EXACT_INPUT`, `EXACT_OUTPUT`, `FLEX_INPUT`, `ANY_INPUT`.
