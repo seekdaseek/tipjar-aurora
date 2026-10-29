@@ -30,7 +30,7 @@ with explorer links opened on camera. Anything run against a fake API is labelle
 - Wallet for the real tip: the one used in the first real tip; show the app, never a seed phrase or a key.
 - Open both explorer links on camera. Do not blur the transaction hashes: they are the evidence.
 - Fake-API footage (kept outside the repo with its harness) always carries the red "FAKE AURORA API" banner; keep it visible.
-- Record the real tip only after the preflight prints GO (see `backend/scripts/preflight.mjs`). One take: there is funds for one tip.
+- Record the real tip only after the preflight prints GO (see `backend/scripts/preflight.mjs`). One take: the wallet holds funds for one tip only.
 - Export 1080x1920 or 1080p landscape with a phone mockup; H.264, under 100 MB.
 
 ## What not to claim
