@@ -147,4 +147,8 @@ Individual user cases go through https://aurora.dev/intents-support with the tra
    so it could not be probed that way. Whether a deposit landing after the requested time (but before the quoted one) is honoured is
    untested. The backend therefore reports the earlier of the two and the app counts down to it.
 4. `originChainTxHashes` fills in once the deposit is detected; its timing relative to `KNOWN_DEPOSIT_TX`.
+   Observed 2026-10-29 (Base USDC -> Solana USDC, 1.04 USDC, real tip): `PENDING_DEPOSIT` -> `PROCESSING` about 21 s after the deposit was
+   seen on-chain -> `SUCCESS` about 22 s later (Base tx confirmed 18:13:15 UTC, Solana tx 18:13:50 UTC). In `SUCCESS` both
+   `originChainTxHashes` and `destinationChainTxHashes` were present, but with `explorerUrl: ""`, so explorer links are built from the
+   chain and hash (`backend/src/explorers.js`). Fees were about 1% (1.04 in, 1.029777 out).
 5. Whether `/api/tokens` exposes every chain in section "Asset IDs" for our key.
