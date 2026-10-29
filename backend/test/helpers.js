@@ -15,6 +15,7 @@ export const TOKENS = {
     { assetId: SOL_USDC, decimals: 6, blockchain: 'sol', symbol: 'USDC', price: 1, priceUpdatedAt: 'x' },
     { assetId: 'nep141:base.omft.near', decimals: 18, blockchain: 'base', symbol: 'ETH', price: 2300, priceUpdatedAt: 'x' },
     { assetId: 'nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near', decimals: 6, blockchain: 'base', symbol: 'USDC', price: 1, priceUpdatedAt: 'x' },
+    { assetId: 'nep141:bsc-0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d.omft.near', decimals: 18, blockchain: 'bsc', symbol: 'USDC', price: 1, priceUpdatedAt: 'x' },
     { assetId: 'nep141:btc.omft.near', decimals: 8, blockchain: 'btc', symbol: 'BTC', price: 80000, priceUpdatedAt: 'x' },
     { assetId: 'nep141:tron.omft.near', decimals: 6, blockchain: 'tron', symbol: 'TRX', price: 0.33, priceUpdatedAt: 'x' },
     { assetId: 'nep141:tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near', decimals: 6, blockchain: 'tron', symbol: 'USDT', price: 1, priceUpdatedAt: 'x' },
@@ -53,6 +54,8 @@ export async function startFake() {
     quoteHook: null, // (body) => {status, json, headers}
     statusQueue: [], // each GET /api/status shifts one; the last one repeats
     tokensStatus: 200,
+    incidents: { status: 'operational' },
+    incidentsStatus: 200,
   };
   const server = createServer((req, res) => {
     const chunks = [];
@@ -66,6 +69,7 @@ export async function startFake() {
         res.end(JSON.stringify(json));
       };
       if (url.pathname === `/api/tokens/${KEY}`) return fake.tokensStatus === 200 ? reply(200, TOKENS) : reply(fake.tokensStatus, { message: 'down' });
+      if (url.pathname === `/api/incidents/${KEY}`) return fake.incidentsStatus === 200 ? reply(200, fake.incidents) : reply(fake.incidentsStatus, { message: 'down' });
       if (url.pathname === `/api/quote/${KEY}`) {
         const body = JSON.parse(raw);
         if (fake.quoteHook) {

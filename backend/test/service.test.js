@@ -14,6 +14,8 @@ const reset = () => {
   fake.quoteHook = null;
   fake.statusQueue = [];
   fake.tokensStatus = 200;
+  fake.incidents = { status: 'operational' };
+  fake.incidentsStatus = 200;
 };
 const rejects = (p, code) => assert.rejects(p, (e) => e instanceof TipError && e.code === code, code);
 
@@ -275,7 +277,7 @@ test('routes only list assets that exist in the live Aurora token list', async (
   reset();
   const { service } = makeService(fake);
   const r = await service.routes();
-  assert.deepEqual(r.chains.map((c) => c.key), ['base', 'btc', 'tron']); // fake list has only these
+  assert.deepEqual(r.chains.map((c) => c.key), ['base', 'bsc', 'btc', 'tron']); // fake list has only these
   assert.deepEqual(r.chains.find((c) => c.key === 'tron').tokens.map((t) => t.symbol), ['TRX', 'USDT']);
   assert.equal(r.chains.find((c) => c.key === 'tron').minUsd, 2);
 });
@@ -289,7 +291,7 @@ test('token list outage with no cache is a 503, with cache it keeps serving', as
   await service.routes();
   fake.tokensStatus = 500;
   clock.t += 10 * 60_000;
-  assert.equal((await service.routes()).chains.length, 3);
+  assert.equal((await service.routes()).chains.length, 4);
 });
 
 // ---- checks ----
@@ -355,4 +357,60 @@ test('sendExact: a quote that disagrees on the amount to send, or skims over 5%,
   await rejects(service.createTip(goodTip({ symbol: 'USDC', amountUsd: '1.04', sendExact: true })), 'bad_quote');
   fake.quoteOver = exactOver({ amountOut: '988000' }); // exactly the 95% boundary: allowed
   await service.createTip(goodTip({ symbol: 'USDC', amountUsd: '1.04', sendExact: true }));
+});
+
+const BSC_WITHDRAW = { scopeType: 'chain', scopeValue: 'bsc', direction: 'withdraw', status: 'active', resolvedAt: null };
+
+test('incident: a BSC withdrawal pause hides BNB Chain and refuses a quote there; other chains are unaffected', async () => {
+  reset();
+  fake.incidents = { status: 'incidents', incidents: [BSC_WITHDRAW] };
+  const { service } = makeService(fake);
+  const r = await service.routes();
+  assert.ok(!r.chains.some((c) => c.key === 'bsc'), 'bsc hidden');
+  assert.ok(r.chains.some((c) => c.key === 'base'), 'base still offered');
+  assert.equal(r.paused.length, 1);
+  assert.equal(r.paused[0].key, 'bsc');
+  assert.match(r.paused[0].reason, /paused withdrawals on BNB Chain.*refund/);
+  assert.equal(r.destination.ready, true);
+  fake.requests.length = 0;
+  await rejects(service.createTip(goodTip({ chain: 'bsc', symbol: 'USDC', refundTo: EVM })), 'chain_paused');
+  assert.equal(fake.requests.filter((x) => x.path.startsWith('/api/quote')).length, 0, 'no quote requested');
+  await service.createTip(goodTip()); // Base still works
+});
+
+test('incident: resolved ones are ignored; a broken incidents endpoint fails open', async () => {
+  reset();
+  fake.incidents = { status: 'incidents', incidents: [{ ...BSC_WITHDRAW, status: 'resolved', resolvedAt: '2026-10-29T00:00:00Z' }] };
+  assert.ok((await makeService(fake).service.routes()).chains.some((c) => c.key === 'bsc'));
+  reset();
+  fake.incidentsStatus = 500;
+  const r = await makeService(fake).service.routes();
+  assert.ok(r.chains.some((c) => c.key === 'bsc'));
+  assert.deepEqual(r.paused, []);
+});
+
+test('incident: the list is cached for a minute, and the last known list survives a failed refresh', async () => {
+  reset();
+  fake.incidents = { status: 'incidents', incidents: [BSC_WITHDRAW] };
+  const { service, clock } = makeService(fake);
+  await service.routes();
+  await service.routes();
+  assert.equal(fake.requests.filter((x) => x.path.startsWith('/api/incidents')).length, 1);
+  clock.t += 61_000;
+  fake.incidentsStatus = 500;
+  assert.equal((await service.routes()).paused.length, 1, 'still paused on a failed refresh');
+});
+
+test('incident: a Solana-side pause stops quoting; a token-scope incident hides just that token', async () => {
+  reset();
+  fake.incidents = { status: 'incidents', incidents: [{ scopeType: 'chain', scopeValue: 'sol', direction: '*', status: 'active' }] };
+  const a = makeService(fake).service;
+  assert.equal((await a.routes()).destination.ready, false);
+  await rejects(a.createTip(goodTip()), 'chain_paused'.replace('chain_paused', 'route_unavailable'));
+  reset();
+  fake.incidents = { status: 'incidents', incidents: [{ scopeType: 'token', scopeValue: 'nep141:base.omft.near', direction: '*', status: 'active' }] };
+  const b = makeService(fake).service;
+  const base = (await b.routes()).chains.find((c) => c.key === 'base');
+  assert.deepEqual(base.tokens.map((t) => t.symbol), ['USDC']);
+  await rejects(b.createTip(goodTip()), 'chain_paused');
 });

@@ -22,7 +22,7 @@ export class AuroraClient {
     this.maxAttempts = maxAttempts;
     this.maxWaitMs = maxWaitMs;
     this.timeoutMs = timeoutMs;
-    this.calls = { tokens: 0, quote: 0, status: 0 };
+    this.calls = { tokens: 0, quote: 0, status: 0, incidents: 0 };
   }
 
   async #request(kind, method, path, { query, body } = {}) {
@@ -67,6 +67,9 @@ export class AuroraClient {
 
   tokens() {
     return this.#request('tokens', 'GET', '/api/tokens');
+  }
+  incidents() {
+    return this.#request('incidents', 'GET', '/api/incidents');
   }
   quote(body) {
     return this.#request('quote', 'POST', '/api/quote', { body });

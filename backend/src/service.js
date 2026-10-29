@@ -3,6 +3,8 @@ import { buildRoutes, FAMILY_HINT, DEST } from './routes.js';
 
 export const SUPPORT_URL = 'https://aurora.dev/intents-support';
 const TOKEN_TTL_MS = 5 * 60_000;
+const INCIDENT_TTL_MS = 60_000;
+const INCIDENT_RETRY_MS = 10_000;
 
 export class TipError extends Error {
   constructor(code, message, http = 400) {
@@ -36,6 +38,16 @@ const earlier = (requested, quoted) => {
   return a <= b ? requested : quoted;
 };
 
+const chainIncident = (list, slug) => list.find((i) => i.scopeType === 'chain' && i.scopeValue === slug);
+const tokenIncident = (list, assetId) => list.find((i) => i.scopeType === 'token' && i.scopeValue === assetId);
+// Aurora's Shield incidents. A withdrawal pause on the origin chain stalls a refund there, so the chain is not offered.
+const pauseNote = (label, i) =>
+  i.direction === 'withdraw'
+    ? `Aurora has paused withdrawals on ${label}, so a refund there would be stuck until it clears. Pick another chain.`
+    : i.direction === 'deposit'
+      ? `Aurora has paused deposits on ${label}. Pick another chain.`
+      : `${label} is paused by Aurora right now. Pick another chain.`;
+
 export class TipService {
   constructor({ aurora, store, config, solana, registry, now = Date.now }) {
     this.aurora = aurora;
@@ -47,6 +59,24 @@ export class TipService {
     this.tokens = null;
     this.tokensAt = 0;
     this.statusCache = new Map(); // depositAddress -> {at, raw, inflight}
+    this.incidents = null;
+    this.incidentsUntil = 0;
+  }
+
+  /** Active Aurora incidents. Fails open: a broken incidents endpoint must not take tipping down; the last known list is kept. */
+  async #incidentList() {
+    const t = this.now();
+    if (this.incidents && t < this.incidentsUntil) return this.incidents;
+    try {
+      const r = await this.aurora.incidents();
+      const all = r?.status === 'incidents' && Array.isArray(r.incidents) ? r.incidents : [];
+      this.incidents = all.filter((i) => i && typeof i === 'object' && i.status !== 'resolved' && !i.resolvedAt);
+      this.incidentsUntil = t + INCIDENT_TTL_MS;
+    } catch {
+      this.incidents ??= [];
+      this.incidentsUntil = t + INCIDENT_RETRY_MS;
+    }
+    return this.incidents;
   }
 
   async #tokenList() {
@@ -62,10 +92,23 @@ export class TipService {
 
   async routes() {
     const { dest, chains } = buildRoutes(await this.#tokenList());
+    const inc = await this.#incidentList();
+    const solPaused = !!chainIncident(inc, DEST.chain);
+    const paused = [];
+    const shown = [];
+    for (const c of chains) {
+      const hit = chainIncident(inc, c.slug);
+      if (hit) {
+        paused.push({ key: c.key, label: c.label, reason: pauseNote(c.label, hit) });
+        continue;
+      }
+      const tokens = c.offered.filter((t) => !tokenIncident(inc, t.assetId));
+      if (tokens.length) shown.push({ ...c, offered: tokens });
+    }
     return {
-      destination: { chain: DEST.chain, symbol: DEST.symbol, ready: !!dest },
+      destination: { chain: DEST.chain, symbol: DEST.symbol, ready: !!dest && !solPaused && !(dest && tokenIncident(inc, dest.assetId)) },
       maxTipUsd: this.cfg.maxTipUsd,
-      chains: chains.map((c) => ({
+      chains: shown.map((c) => ({
         key: c.key,
         label: c.label,
         family: c.family,
@@ -73,6 +116,7 @@ export class TipService {
         minUsd: c.minUsd,
         tokens: c.offered.map((t) => ({ symbol: t.symbol, decimals: t.decimals, priceUsd: t.priceUsd })),
       })),
+      paused,
     };
   }
 
@@ -82,6 +126,11 @@ export class TipService {
     const c = chains.find((x) => x.key === chain);
     const tok = c?.offered.find((t) => t.symbol === symbol);
     if (!c || !tok) throw new TipError('unsupported_route', 'That chain or token is not supported.');
+    const inc = await this.#incidentList();
+    const hit = chainIncident(inc, c.slug) ?? tokenIncident(inc, tok.assetId);
+    if (hit) throw new TipError('chain_paused', pauseNote(c.label, hit), 409);
+    if (chainIncident(inc, DEST.chain) || tokenIncident(inc, dest.assetId))
+      throw new TipError('route_unavailable', 'USDC payouts on Solana are paused by Aurora right now. Try again later.', 503);
 
     sendExact = sendExact === true;
     // sendExact: the tipper sends exactly this amount (EXACT_INPUT). Only for stablecoins, where "$X" is also X tokens;
