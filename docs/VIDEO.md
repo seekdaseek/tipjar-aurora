@@ -1,11 +1,16 @@
 # Demo video plan (2 to 4 minutes)
 
-Target length 3:15. Real footage only for the headline claim: the real tip is screen-recorded on a real device,
-with explorer links opened on camera. Anything run against a fake API is labelled on screen as such.
+Target length 3:15. Anything run against a fake API is labelled on screen as such.
+
+**Status (2026-10-31):** the one real tip (Base -> Solana, 2026-10-29) was made **without a screen recording**, so no footage of
+the send exists, and the tipper wallet no longer holds enough for another real tip. The video therefore must not show the send as
+live footage. It can show: the page and flow against the labelled fake API, then the real tip's read-only receipt
+(`https://tipjar-aurora.pages.dev/#tip=0xbfa9d9c3457acaa0f755c79631758673dbc7b00a`) and both explorer pages for it, opened live. The
+scene table and checklist below were written before this and describe the original plan; read "Real tip" as "the receipt and explorer pages".
 
 ## What must be in it (from the judging rubric)
 
-1. A working flow, not a mock: one real tip from another chain arriving as USDC in a Solana wallet (recorded on the web build).
+1. A working flow, not a mock: one real tip from another chain arriving as USDC in a Solana wallet (shown through its receipt page and both explorer pages; the send itself was not recorded).
 2. The friction it removes: a tipper holding value on another chain cannot tip a Solana creator without a Solana wallet.
 3. Settlement and refund handling shown, not described.
 4. A clean flow with no unnecessary actions.
@@ -30,7 +35,7 @@ with explorer links opened on camera. Anything run against a fake API is labelle
 - Wallet for the real tip: the one used in the first real tip; show the app, never a seed phrase or a key.
 - Open both explorer links on camera. Do not blur the transaction hashes: they are the evidence.
 - Fake-API footage (kept outside the repo with its harness) always carries the red "FAKE AURORA API" banner; keep it visible.
-- Record the real tip only after the preflight prints GO (see `backend/scripts/preflight.mjs`). One take: the wallet holds funds for one tip only.
+- A second real run is only possible if the tipper wallet is funded again; if so, run `backend/scripts/preflight.mjs` first and record one take.
 - Export 1080p landscape; H.264, under 100 MB.
 
 ## What not to claim

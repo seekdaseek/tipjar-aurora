@@ -1,8 +1,10 @@
 # Aurora Intents notes (Swap API + Persistent Addresses)
 
-Read live on 2026-10-29 from docs.intents.aurora.dev (page markdown, appending `.md` to the page URL).
-Nothing below has been executed against the API yet: no API key existed when this was written.
-Every line marked UNVERIFIED must be confirmed by a real call before the demo.
+Read on 2026-10-29 from docs.intents.aurora.dev (page markdown, appending `.md` to the page URL), before an API key existed.
+Since then the backend has called tokens, quote (dry and live), status and incidents with a real key, and one real tip has
+run (Base USDC -> Solana USDC). Statements marked "Observed" below come from those calls; everything else is the
+documentation's word. What is still unconfirmed is listed under UNVERIFIED at the end. The persistent-address (Plan B) section
+comes from the docs only; it has not been called.
 
 ## Base URL, auth
 
@@ -82,7 +84,9 @@ Terminal per the docs ("until SUCCESS, REFUNDED or FAILED"): `SUCCESS`, `REFUNDE
 
 `swapDetails`: `intentHashes[], nearTxHashes[], amountIn, amountInFormatted, amountInUsd, amountOut, amountOutFormatted, amountOutUsd, slippage, originChainTxHashes[{hash, explorerUrl}], destinationChainTxHashes[{hash, explorerUrl}], refundedAmount, refundedAmountFormatted, refundedAmountUsd, refundReason, depositedAmount, depositedAmountFormatted, depositedAmountUsd, referral`.
 
-So the UI gets both explorer links straight from Aurora: `originChainTxHashes[].explorerUrl` (the tip) and `destinationChainTxHashes[].explorerUrl` (arrival on Solana). A refund shows as `REFUNDED` with `refundedAmount*` and `refundReason`.
+The docs describe `explorerUrl` for each hash, but **observed 2026-10-29: Aurora returned the hashes with `explorerUrl: ""`**, so the
+backend builds the explorer links itself from the chain and the hash (`backend/src/explorers.js`; only Base and Solana are verified
+live). A refund shows as `REFUNDED` with `refundedAmount*` and `refundReason` (docs; never observed).
 
 ## Supported tokens: `GET /api/tokens/{apiKey}`
 
@@ -104,7 +108,7 @@ Asset IDs (taken 2026-10-29 from the public `https://1click.chaindefuser.com/v0/
 | tron | USDT | `nep141:tron-d28a265909efecdcee7c5028585214ea0b96f015.omft.near` | 6 |
 | near | USDC | `nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1` | 6 |
 
-The backend does not trust this table: it loads `/api/tokens/{apiKey}` at startup (cached, refreshed every 5 minutes) and only offers routes whose assetIds exist in that live list. Polygon, Optimism, BSC, Avalanche USDC use `nep245:v2_1.omni.hot.tg:...` ids; those come from the live list too.
+The backend does not trust this table: it loads `/api/tokens/{apiKey}` on first use (cached for 5 minutes) and only offers routes whose assetIds exist in that live list. Polygon, Optimism, BSC, Avalanche USDC use `nep245:v2_1.omni.hot.tg:...` ids per the public list; those come from the live list too. Observed 2026-10-29: the live list for our key yielded all ten chains the app offers.
 
 ## Rate limits
 
@@ -139,8 +143,8 @@ Individual user cases go through https://aurora.dev/intents-support with the tra
 
 ## UNVERIFIED (confirm with the first real call)
 
-1. That `EXACT_OUTPUT` quotes return a `depositAddress` for every origin asset we list.
-2. That the Solana recipient needs an existing USDC token account (the backend checks it before quoting; if Aurora creates it, the check can be relaxed).
+1. That `EXACT_OUTPUT` quotes return a `depositAddress` for every origin asset we list. Only Base USDC with `EXACT_INPUT` has been quoted (live, non-dry) and paid; no other origin asset or `EXACT_OUTPUT` quote with a real deposit address has been exercised.
+2. That the Solana recipient needs an existing USDC token account (the backend checks it before quoting; if Aurora creates it, the check can be relaxed). The creator wallet used already had one, so this was not tested.
 3. The real `deadline` default and `timeEstimate` per chain. Observed 2026-10-29 for Base USDC (request `deadline` = now + 30 min):
    the quote response carried `deadline` and `timeWhenInactive` exactly 72 h after the requested time, while `quoteRequest.deadline`
    (visible in `/api/status`) kept the requested one. The 72 h is unexplained and undocumented, and dry quotes return no deadline,
@@ -150,5 +154,8 @@ Individual user cases go through https://aurora.dev/intents-support with the tra
    Observed 2026-10-29 (Base USDC -> Solana USDC, 1.04 USDC, real tip): `PENDING_DEPOSIT` -> `PROCESSING` about 21 s after the deposit was
    seen on-chain -> `SUCCESS` about 22 s later (Base tx confirmed 18:13:15 UTC, Solana tx 18:13:50 UTC). In `SUCCESS` both
    `originChainTxHashes` and `destinationChainTxHashes` were present, but with `explorerUrl: ""`, so explorer links are built from the
-   chain and hash (`backend/src/explorers.js`). Fees were about 1% (1.04 in, 1.029777 out).
-5. Whether `/api/tokens` exposes every chain in section "Asset IDs" for our key.
+   chain and hash (`backend/src/explorers.js`). Fees were about 1% (1.04 in, 1.029777 out). `KNOWN_DEPOSIT_TX` was not seen by
+   our 6 to 8 second polling (it may be too short-lived, or skipped).
+5. ~~Whether `/api/tokens` exposes every chain~~: observed, yes for all ten chains the app offers (the Asset IDs table lists only some of them).
+6. The refund, incomplete-deposit, expired and failed outcomes: never triggered against the real API. The app's handling follows the documented response shapes and is tested against a fake server only.
+7. Incidents: `GET /api/incidents` was observed returning chain-scope and token-scope entries (a `bsc` withdrawal pause on 2026-10-28/29, since resolved). The backend hides an affected chain and refuses quotes there; the `direction` semantics (withdraw vs deposit) are as documented, not tested beyond that one incident.
