@@ -297,7 +297,8 @@ export class TipService {
   derive(raw, rec) {
     const status = raw?.status ?? 'PENDING_DEPOSIT';
     const d = raw?.swapDetails ?? {};
-    const links = { origin: txLinks(d.originChainTxHashes, rec.chain), destination: txLinks(d.destinationChainTxHashes, DEST.chain) };
+    // For a refund the "destination" hash is the refund transaction on the chain the tipper paid from (observed 2026-11-04), not a Solana tx.
+    const links = { origin: txLinks(d.originChainTxHashes, rec.chain), destination: txLinks(d.destinationChainTxHashes, status === 'REFUNDED' ? rec.chain : DEST.chain) };
     const sym = rec.symbol;
     const expiredAt = rec.deadline ? Date.parse(rec.deadline) : NaN;
     let stage;

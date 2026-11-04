@@ -29,5 +29,7 @@ export const isStable = (symbol: string) => symbol === 'USDC' || symbol === 'USD
 /** "1", "1.04", "0.5" -> true. Mirrors the backend rule (up to 6 digits, up to 6 decimals). */
 export const isAmount = (s: string) => /^\d{1,6}(\.\d{1,6})?$/.test(s);
 
+/** Label of the second Proof row: a refund lands on the chain the tipper paid from, everything else arrives on Solana. */
+export const destinationLabel = (stage: Stage, originChainLabel: string) => (stage === 'refunded' ? `Refund on ${originChainLabel}` : 'Arrival on Solana');
 export const shortHash = (h: string) => (h.length > 16 ? h.slice(0, 8) + '…' + h.slice(-6) : h);
 export const isHttps = (u: string) => u.startsWith('https://');

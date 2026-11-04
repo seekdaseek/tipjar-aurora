@@ -1,4 +1,4 @@
-import {isTerminal, minutesLeft, shortHash, stepStates} from '../src/anyChain/stages';
+import {destinationLabel, isTerminal, minutesLeft, shortHash, stepStates} from '../src/anyChain/stages';
 import {TipStatus} from '../src/anyChain/api';
 
 const st = (stage: TipStatus['stage']) => ({stage} as TipStatus);
@@ -63,5 +63,14 @@ describe('permalink (#tip=<deposit address>)', () => {
     for (const h of ['', '#', '#tip=', '#tip=abc', '#tip=' + 'x'.repeat(129), '#tip=0x12 34567890', '#tip=<script>alert(1)</script>', '#tip=0xabcdef01&x=1', '#other=0xbfa9D9C3457AcAa0', 'tip=0xbfa9D9C3457AcAa0', '#tip=../../etc/passwd']) {
       expect(parseTipHash(h)).toBeNull();
     }
+  });
+});
+
+describe('destinationLabel (second Proof row)', () => {
+  it('is the arrival on Solana, except for a refund, which came back on the origin chain', () => {
+    expect(destinationLabel('arrived', 'Base')).toBe('Arrival on Solana');
+    expect(destinationLabel('received', 'Base')).toBe('Arrival on Solana');
+    expect(destinationLabel('refunded', 'Base')).toBe('Refund on Base');
+    expect(destinationLabel('refunded', 'Ethereum')).toBe('Refund on Ethereum');
   });
 });

@@ -1,7 +1,7 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
 import {TipStatus} from './api';
-import {shortHash, stepStates, StepState} from './stages';
+import {destinationLabel, shortHash, stepStates, StepState} from './stages';
 
 type Props = {status: TipStatus | null; name: string; chainLabel: string; symbol: string; pollErr?: boolean; onOpen: (url: string) => void};
 
@@ -22,7 +22,7 @@ export default function StatusCard({status, name, chainLabel, symbol, pollErr, o
         <View style={s.linksCard}>
           <Text style={s.reqTitle}>Proof</Text>
           {status.links.origin.map(l => <LinkRow key={l.url} label={`Tip on ${chainLabel}`} hash={l.hash} onPress={() => onOpen(l.url)} />)}
-          {status.links.destination.map(l => <LinkRow key={l.url} label="Arrival on Solana" hash={l.hash} onPress={() => onOpen(l.url)} />)}
+          {status.links.destination.map(l => <LinkRow key={l.url} label={destinationLabel(stage, chainLabel)} hash={l.hash} onPress={() => onOpen(l.url)} />)}
         </View>
       )}
       {status?.refund && (

@@ -457,3 +457,13 @@ test('BTC minimum is 8 USD (Aurora rejects below 8,300 sat), with the figure in 
   const r = await service.routes();
   assert.equal(r.chains.find((c) => c.key === 'btc').minUsd, 8);
 });
+
+test('status: a refund shows the refund transaction on the ORIGIN chain (observed 2026-11-04: destination hash is a Base tx, not Solana)', async () => {
+  const dep = '0x' + 'ab'.repeat(32);
+  const refund = '0x' + 'cd'.repeat(32);
+  const { service, q } = await tipWith([{ status: 'REFUNDED', swapDetails: { refundedAmountFormatted: '0.00044944', refundReason: 'QUOTE_EXPIRED', originChainTxHashes: [{ hash: dep, explorerUrl: '' }], destinationChainTxHashes: [{ hash: refund, explorerUrl: '' }] } }]);
+  const s = await service.tipStatus(q.depositAddress);
+  assert.equal(s.stage, 'refunded');
+  assert.deepEqual(s.links.origin, [{ hash: dep, url: 'https://base.blockscout.com/tx/' + dep }]);
+  assert.deepEqual(s.links.destination, [{ hash: refund, url: 'https://base.blockscout.com/tx/' + refund }], 'the refund link is kept, on the origin chain');
+});
