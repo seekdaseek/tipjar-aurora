@@ -121,6 +121,8 @@ Per API key, per endpoint: 100 requests / 10 s and 2000 / hour, both fixed clock
 - For an `EXACT_INPUT` quote `minAmountIn` simply equals the amount asked for, so it is not a market minimum.
 - `EXACT_OUTPUT` (what the page uses for ETH): the quote's `amountIn` is about 0.6 to 1.7 percent above the exact price (it carries a slippage margin), `minAmountIn` is the exact-price amount, and the creator receives exactly the requested USDC.
 - Estimates seen: Arbitrum 24 s, Base 34 s, Ethereum 44 s, NEAR 17 s, TRON 77 to 79 s, BTC about 13 minutes.
+- **Explorer links.** Etherscan and BaseScan sit behind a Cloudflare challenge for automated browsers (observed 2026-11-04), so the backend builds Ethereum, Base, Arbitrum, Optimism and Polygon links on Blockscout, which loads for both people and scripts. The Oct 29 Base tip is also linked on BaseScan in the README, which works in a normal browser.
+- **Real network fee on Ethereum mainnet** for a 21,000 gas ETH send was 0.000044 ETH (about 0.10 USD) at an effective 2.0955 gwei, with a base fee of 0.085 gwei: MetaMask adds a tip of about 2 gwei that the RPC does not suggest. Preflight floors the Ethereum tip at 2 gwei.
 
 ## Minimums, testing
 

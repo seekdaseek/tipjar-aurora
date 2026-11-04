@@ -119,15 +119,15 @@ test('native ETH on Ethereum: GO with the real balance and gas, EXACT_OUTPUT dry
   assert.equal(r.numbers.send, '0.000874471891781711');
   assert.equal(r.numbers.min, '0.00086577017732776');
   assert.equal(r.numbers.receive, '2');
-  assert.equal(r.numbers.gasEth, '0.0000009408'); // 44,800,000 wei x 21,000 gas
-  assert.equal(r.numbers.gasUsd, '0.0022');
+  assert.equal(r.numbers.gasEth, '0.0000429408'); // (44,800,000 wei base + 2 gwei tip) x 21,000 gas
+  assert.equal(r.numbers.gasUsd, '0.0998');
   assert.ok(seen.every((s) => s.url === 'https://ethereum-rpc.publicnode.com'));
   assert.deepEqual([...new Set(seen.map((s) => s.method))].sort(), ['eth_gasPrice', 'eth_getBalance']);
   assert.equal(quoteCalls[0].dry, true);
   assert.equal(quoteCalls[0].swapType, 'EXACT_OUTPUT');
   assert.equal(quoteCalls[0].amount, '2000000');
   assert.equal(quoteCalls[0].originAsset, 'nep141:eth.omft.near');
-  assert.match(r.lines.join('\n'), /network fee to send about .* ETH \(about 0\.002\d USD\) at 0\.0448 gwei/);
+  assert.match(r.lines.join('\n'), /network fee to send about .* ETH \(about 0\.0998 USD\) at 2\.0448 gwei \(base 0\.0448 plus a 2 gwei tip/);
 });
 
 test('native ETH uses the Arbitrum and Base RPCs for those chains', async () => {
@@ -173,4 +173,13 @@ test('refund drill NO-GO: not short of the minimum, worth under 1 USD, or more t
 test('refund drill needs the same fee reserve as a send', async () => {
   const r = await runNative('base', nativeSetup().aurora, nativeRpc({ balance: 450_000_000_000_000n }), { drillAmount: '0.00045' });
   assert.equal(r.go, false);
+});
+
+test('Ethereum fee estimate includes the tip MetaMask adds: the real 2026-11-04 send cost 0.000044 ETH at a 0.0849 gwei base fee', async () => {
+  const r = await runNative('eth', nativeSetup().aurora, nativeRpc({ balance: 792_829_413_997_342n, gasPrice: 84_900_000n }));
+  assert.equal(r.numbers.gasEth, '0.0000437829'); // (0.0849 + 2) gwei x 21,000
+  assert.ok(Number(r.numbers.gasUsd) > 0.09 && Number(r.numbers.gasUsd) < 0.11, 'about 0.10 USD, not 0.004');
+  // Base and Arbitrum have no tip floor
+  const b = await runNative('base', nativeSetup().aurora, nativeRpc({ balance: 2_000_000_000_000_000n, gasPrice: 6_000_000n }));
+  assert.equal(b.numbers.gasEth, '0.000000126');
 });

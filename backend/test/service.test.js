@@ -249,7 +249,7 @@ test('status: SUCCESS with empty explorerUrl (as Aurora really returns it) still
   const { service, q } = await tipWith([{ status: 'SUCCESS', swapDetails: { originChainTxHashes: [{ hash: origin, explorerUrl: '' }], destinationChainTxHashes: [{ hash: dest, explorerUrl: '' }] } }]);
   const s = await service.tipStatus(q.depositAddress);
   assert.equal(s.stage, 'arrived');
-  assert.deepEqual(s.links.origin, [{ hash: origin, url: 'https://basescan.org/tx/' + origin }]);
+  assert.deepEqual(s.links.origin, [{ hash: origin, url: 'https://base.blockscout.com/tx/' + origin }]);
   assert.deepEqual(s.links.destination, [{ hash: dest, url: 'https://explorer.solana.com/tx/' + dest }]);
 });
 

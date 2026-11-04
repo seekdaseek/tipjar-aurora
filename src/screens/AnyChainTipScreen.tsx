@@ -8,7 +8,8 @@ import {ApiError, Quote, RouteChain, Routes, TipStatus, createTip, getRoutes, ge
 import {isAmount, isHttps, isStable, isTerminal, minutesLeft, shortHash} from '../anyChain/stages';
 import StatusCard from '../anyChain/StatusCard';
 import QrCode from '../anyChain/QrCode';
-import {shareAddress} from '../anyChain/shareAddress';
+import {shareAddress, selectAddress} from '../anyChain/shareAddress';
+import {copyAddress} from '../anyChain/copyFlow';
 
 type Props = {navigation: NativeStackNavigationProp<RootStackParamList, 'AnyChain'>; route: RouteProp<RootStackParamList, 'AnyChain'>};
 const AMOUNTS = ['1', '2', '5', '10', '25'];
@@ -28,7 +29,7 @@ export default function AnyChainTipScreen({navigation, route}: Props) {
   const [status, setStatus] = useState<TipStatus | null>(null);
   const [pollErr, setPollErr] = useState('');
   const [now, setNow] = useState(Date.now());
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<'idle' | 'ok' | 'failed'>('idle');
   const stopped = useRef(false);
 
   const loadRoutes = useCallback(() => {
@@ -95,11 +96,12 @@ export default function AnyChainTipScreen({navigation, route}: Props) {
               <Text style={s.sub}>on {quote.chainLabel}{quote.sendAmountUsd ? ` · about $${quote.sendAmountUsd}` : ''} → {name} receives {quote.receiveUsdc} USDC on Solana</Text>
               <View style={s.qrCard}>
                 <QrCode value={quote.qr} />
-                <Text selectable style={s.addr}>{quote.depositAddress}</Text>
+                <Text selectable testID="deposit-address" style={s.addr}>{quote.depositAddress}</Text>
                 {quote.depositMemo ? <Text style={s.memo}>Memo (required): {quote.depositMemo}</Text> : null}
-                <TouchableOpacity style={s.shareBtn} onPress={() => { shareAddress(quote.depositAddress).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {}); }}>
-                  <Text style={s.shareText}>{copied ? 'Copied ✓' : 'Copy / share address'}</Text>
+                <TouchableOpacity style={s.shareBtn} onPress={() => { copyAddress(quote.depositAddress, shareAddress, selectAddress).then(r => { setCopyState(r); if (r === 'ok') setTimeout(() => setCopyState('idle'), 2000); }); }}>
+                  <Text style={s.shareText}>{copyState === 'ok' ? 'Copied ✓' : 'Copy / share address'}</Text>
                 </TouchableOpacity>
+                {copyState === 'failed' ? <Text style={s.copyFail}>Could not copy automatically. The address is selected: press Cmd+C (Ctrl+C on Windows), or tap and hold it to copy.</Text> : null}
               </View>
               <View style={s.reqCard}>
                 <Text style={s.reqTitle}>Transfer requirements</Text>
@@ -221,4 +223,5 @@ const s = StyleSheet.create({
   reqTitle: {color: '#E8C454', fontSize: 13, fontWeight: '700', marginBottom: 6},
   reqText: {color: '#D1D5DB', fontSize: 13, lineHeight: 19, marginTop: 4},
   msgBad: {color: '#F87171', fontSize: 13, lineHeight: 19, marginTop: 10},
+  copyFail: {color: '#FBBF24', fontSize: 12, lineHeight: 17, marginTop: 8, textAlign: 'center'},
 });

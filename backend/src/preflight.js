@@ -13,6 +13,9 @@ export const RPC = {
 const GAS_FLOOR_WEI = 20_000_000_000_000n; // 0.00002 ETH: an ERC-20 transfer on Base costs a small fraction of this
 const NATIVE_TRANSFER_GAS = 21_000n;
 const GAS_SAFETY = 3n; // the price can move in the minutes before the send, and L2s add an L1 data fee
+// MetaMask adds a priority tip far above what the RPC suggests (about 2 gwei on Ethereum mainnet on 2026-11-04, when the base fee was 0.09 gwei:
+// a 21,000 gas send cost 0.000044 ETH, about 25 times the base-fee estimate). The estimate floors the tip so it cannot understate that.
+const MIN_TIP_WEI = { eth: 2_000_000_000n };
 const DRILL_FLOOR_USD = 1; // Aurora's recommended minimum deposit; below it a deposit may not be returned automatically
 
 async function rpcCall(fetchImpl, url, method, params) {
@@ -50,11 +53,12 @@ export async function preflight({ aurora, fetchImpl = fetch, chain, symbol, amou
   let gasUsd = null;
   if (native) {
     const gasPrice = await rpcCall(fetchImpl, url, 'eth_gasPrice', []);
-    const cost = gasPrice * NATIVE_TRANSFER_GAS;
+    const tip = MIN_TIP_WEI[chain] ?? 0n;
+    const cost = (gasPrice + tip) * NATIVE_TRANSFER_GAS;
     gasEth = formatMinor(cost, 18);
     gasUsd = origin.price ? ((Number(cost) / 1e18) * origin.price).toFixed(4) : null;
     reserve = cost * GAS_SAFETY > GAS_FLOOR_WEI ? cost * GAS_SAFETY : GAS_FLOOR_WEI;
-    lines.push(`network fee to send about ${gasEth} ETH${gasUsd ? ` (about ${gasUsd} USD)` : ''} at ${(Number(gasPrice) / 1e9).toFixed(4)} gwei; kept in reserve: ${formatMinor(reserve, 18)} ETH`);
+    lines.push(`network fee to send about ${gasEth} ETH${gasUsd ? ` (about ${gasUsd} USD)` : ''} at ${(Number(gasPrice + tip) / 1e9).toFixed(4)} gwei${tip ? ` (base ${(Number(gasPrice) / 1e9).toFixed(4)} plus a ${Number(tip) / 1e9} gwei tip, what MetaMask adds)` : ''}; kept in reserve: ${formatMinor(reserve, 18)} ETH`);
   }
 
   // 3. live quote and the amount to send, from a dry quote (no deposit address is created)
