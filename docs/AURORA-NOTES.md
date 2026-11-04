@@ -124,6 +124,14 @@ Per API key, per endpoint: 100 requests / 10 s and 2000 / hour, both fixed clock
 - **Explorer links.** Etherscan and BaseScan sit behind a Cloudflare challenge for automated browsers (observed 2026-11-04), so the backend builds Ethereum, Base, Arbitrum, Optimism and Polygon links on Blockscout, which loads for both people and scripts. The Oct 29 Base tip is also linked on BaseScan in the README, which works in a normal browser.
 - **Real network fee on Ethereum mainnet** for a 21,000 gas ETH send was 0.000044 ETH (about 0.10 USD) at an effective 2.0955 gwei, with a base fee of 0.085 gwei: MetaMask adds a tip of about 2 gwei that the RPC does not suggest. Preflight floors the Ethereum tip at 2 gwei.
 
+## Observed 2026-11-04: the first live refund (Base ETH, deliberately short deposit)
+- Quote: `EXACT_OUTPUT`, "creator receives 2 USD", minimum 0.000864478 ETH, requested deadline 11:52:57 UTC (quote.deadline reported as 2026-11-07 11:52:57). Deposit: 0.00045 ETH at 11:30:01 UTC.
+- Status `INCOMPLETE_DEPOSIT` appeared within about 40 seconds, with the exact shortfall (`0.000414477749375101` ETH).
+- Refund: `REFUNDED`, `refundReason: QUOTE_EXPIRED`, `refundedAmountFormatted: 0.00044944` (0.00045 minus a 0.00000056 ETH fee, exactly the quote's `refundFee` 560,000,000,000 wei). Refund transaction on Base at 11:53:23 UTC from Aurora's address `0x2cff890f…` to the refund address, 26 seconds after the requested deadline; `updatedAt` 11:53:43.
+- **The deadline we REQUEST governs refunds, not the 72-hours-later `quote.deadline`** (this answers the open question under UNVERIFIED 3).
+- For a refund, `destinationChainTxHashes` holds the **refund transaction on the origin chain** (a Base hash here), not a Solana transaction. The backend now builds that link on the origin chain and the page labels it "Refund on <chain>". `explorerUrl` was empty again.
+- A third party sent 0.000000393 ETH to the deposit address at 11:30:05 (origin unknown; possibly Aurora funding gas for its sweep).
+
 ## Minimums, testing
 
 - No public testnet. Test on mainnet with small amounts above the thresholds.
@@ -155,7 +163,7 @@ Individual user cases go through https://aurora.dev/intents-support with the tra
 
 1. That `EXACT_OUTPUT` quotes return a `depositAddress` for every origin asset we list. Only Base USDC with `EXACT_INPUT` has been quoted (live, non-dry) and paid; no other origin asset or `EXACT_OUTPUT` quote with a real deposit address has been exercised.
 2. That the Solana recipient needs an existing USDC token account (the backend checks it before quoting; if Aurora creates it, the check can be relaxed). The creator wallet used already had one, so this was not tested.
-3. The real `deadline` default and `timeEstimate` per chain. Observed 2026-10-29 for Base USDC (request `deadline` = now + 30 min):
+3. The real `deadline` default and `timeEstimate` per chain. (Resolved 2026-11-04: the requested deadline governs refunds; see the refund section above.) Observed 2026-10-29 for Base USDC (request `deadline` = now + 30 min):
    the quote response carried `deadline` and `timeWhenInactive` exactly 72 h after the requested time, while `quoteRequest.deadline`
    (visible in `/api/status`) kept the requested one. The 72 h is unexplained and undocumented, and dry quotes return no deadline,
    so it could not be probed that way. Whether a deposit landing after the requested time (but before the quoted one) is honoured is
@@ -167,5 +175,5 @@ Individual user cases go through https://aurora.dev/intents-support with the tra
    chain and hash (`backend/src/explorers.js`). Fees were about 1% (1.04 in, 1.029777 out). `KNOWN_DEPOSIT_TX` was not seen by
    our 6 to 8 second polling (it may be too short-lived, or skipped).
 5. ~~Whether `/api/tokens` exposes every chain~~: observed, yes for all ten chains the app offers (the Asset IDs table lists only some of them).
-6. The refund, incomplete-deposit, expired and failed outcomes: never triggered against the real API. The app's handling follows the documented response shapes and is tested against a fake server only.
+6. Refund outcomes: ONE has been triggered live (incomplete deposit, refunded as `QUOTE_EXPIRED` after the deadline). Too much sent, a failed swap and a refund on a non-Base chain have not; the app's handling of those follows the documented response shapes and is tested against a fake server only.
 7. Incidents: `GET /api/incidents` was observed returning chain-scope and token-scope entries (a `bsc` withdrawal pause on 2026-10-28/29, since resolved). The backend hides an affected chain and refuses quotes there; the `direction` semantics (withdraw vs deposit) are as documented, not tested beyond that one incident.

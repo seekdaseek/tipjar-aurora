@@ -3,17 +3,18 @@
 Tip Jar is a Solana app for tipping creators. This hackathon build (Encode Solana Hackathon 2026, Aurora Intents track)
 adds **Tip from any chain**: the tipper pays from Ethereum, Base, Arbitrum, Optimism, Polygon, BNB Chain, Avalanche,
 Bitcoin, NEAR or TRON, and the creator receives **USDC in their Solana wallet**. The tipper never installs a Solana
-wallet, bridges, or switches networks. All of those chains are offered from Aurora's live token list; **only Base has been
-proven with a real tip so far** (see below).
+wallet, bridges, or switches networks. All of those chains are offered from Aurora's live token list; **real tips have run from Base and
+Ethereum, and one live refund has run on Base** (see below).
 
 Aurora products used: **Swap API** (Aurora Intents, powered by NEAR Intents). Plan B, if Aurora approves our
 organisation, is **Intents Deposits** persistent addresses (one address per creator that accepts tips from any chain);
 see [docs/AURORA-NOTES.md](docs/AURORA-NOTES.md).
 
-## Verify the real tip (mainnet, 2026-10-29)
+## Verify the real runs (mainnet)
 
-One real tip went through the live page: **1.04 USDC sent on Base arrived as 1.029777 USDC in the creator's Solana wallet**
-(about 1% in fees), about 35 seconds after the Base transaction confirmed.
+Three runs went through the live page.
+
+**1. Base, USDC, 2026-10-29:** 1.04 USDC sent on Base arrived as 1.029777 USDC in the creator's Solana wallet (about 1% in fees), about 35 seconds after the Base transaction confirmed.
 
 | | |
 |---|---|
@@ -21,11 +22,27 @@ One real tip went through the live page: **1.04 USDC sent on Base arrived as 1.0
 | Tip on Base (18:13:15 UTC) | https://basescan.org/tx/0xcfe9d57b9b29581bb5eeb87b5069da2749ccae2f27d9222d9aebff0790464c80 |
 | Arrival on Solana (18:13:50 UTC, finalized) | https://explorer.solana.com/tx/2FfaTW7nkQ7mCM5x7c26MnxPcq21g35vSc7taHYrz3HW29RQFBnsQDzpQZHzyEfMD8N24L2vmtWGgpCr4WR8ZNkd |
 
-The receipt link is `https://tipjar-aurora.pages.dev/#tip=<deposit address>`. It only reads that tip's status
-(`GET /api/tip/<address>`), never creates a quote, and shows the same Waiting / Received / Arrived card with both proof
+**2. Ethereum, native ETH, 2026-11-04:** 0.000439 ETH sent on Ethereum arrived as exactly 1.000000 USDC in the creator's Solana wallet (the page quoted "creator receives 1 USD"), about 2 minutes 40 seconds after the send.
+
+| | |
+|---|---|
+| Receipt | https://tipjar-aurora.pages.dev/#tip=0x4d024f29e1ae54aa3cf14c4a69f59d3b675ffabc |
+| Tip on Ethereum (11:38:23 UTC) | https://etherscan.io/tx/0x29ba4c31def9fe83e6361bf3cf885e6d979d4d29f46f9783396095c1bc5bfcb1 |
+| Arrival on Solana (11:40:52 UTC) | https://explorer.solana.com/tx/6CCwVhTBGggAX1Y62SrfqLwujxT1NAALAjKQEyqpBAnTHhxampqe9JCFhhDzyXTRN8mNvzkQN1amVySpstt5h8f |
+
+**3. Refund, Base, native ETH, 2026-11-04:** the page quoted "creator receives 2 USD" (minimum 0.000864 ETH) and 0.00045 ETH was deliberately sent instead. Aurora reported `INCOMPLETE_DEPOSIT` (0.000414 ETH short) and, 46 seconds after the deadline the app had requested (11:52:57 UTC), refunded 0.00044944 ETH to the refund address with reason `QUOTE_EXPIRED`: the deposit minus the 0.00000056 ETH refund fee the quote had announced.
+
+| | |
+|---|---|
+| Receipt (shows Refunded) | https://tipjar-aurora.pages.dev/#tip=0x56f3724ee72ff7de7ce747b553ac8a8ce72ec7c6 |
+| Deposit (11:30:01 UTC) | https://basescan.org/tx/0x9b0acb49b84a3c19535ef57a6a7b17c92d35af5219388b9e9472f5d5155c5b60 |
+| Refund (11:53:23 UTC) | https://basescan.org/tx/0x10aa658f4f236a59d4147cb7fb83f261d34bf71b5f0843922d401106e4ffd2c8 |
+
+A receipt link is `https://tipjar-aurora.pages.dev/#tip=<deposit address>`. It only reads that tip's status
+(`GET /api/tip/<address>`), never creates a quote, and shows the same Waiting / Received / Arrived or Refunded card with the proof
 links. The backend counts real tips from its own log with `node backend/scripts/evidence.mjs` (SUCCESS plus both transaction
-links). Only Base has a real tip so far, and the refund path is covered by tests against a fake Aurora API but has not been
-exercised live. The live demo (https://tipjar-aurora.pages.dev) moves real money on mainnet.
+links): it reports 2 real tips and 1 refund. Source chains proven with a real arrival: Base and Ethereum. Other chains and tokens,
+Bitcoin and the other non-EVM routes have not been paid. The live demo (https://tipjar-aurora.pages.dev) moves real money on mainnet.
 
 ## What existed before, and what was built in the four weeks
 
@@ -38,9 +55,9 @@ Database creator registry.
 **Built during the hackathon (every commit after `baseline-v1.2`)**:
 - `backend/`: the service that holds the Aurora API key, requests Swap API quotes, validates addresses, polls and
   normalises status, hides chains while Aurora reports an incident on them, and logs real tips for evidence. Zero
-  dependencies, 61 tests against a fake Aurora API (`cd backend && npm test`).
+  dependencies, 74 tests against a fake Aurora API (`cd backend && npm test`).
 - `src/screens/AnyChainTipScreen.tsx`, `src/screens/TipReceipt.tsx` and `src/anyChain/`: the new screen, the read-only
-  receipt, API client, local QR renderer, stage logic. 14 app tests.
+  receipt, API client, local QR renderer, stage logic. 19 app tests.
 - `web/`: a static react-native-web build of the same screen plus the `#tip=` receipt (the live demo).
 - `docs/`: Aurora API notes (with what is and is not verified), deploy runbook, video plan. `database.rules.json`: a
   reference copy of the intended registry rules.
@@ -137,13 +154,14 @@ Deploying the backend and hosting the web build: [docs/DEPLOY.md](docs/DEPLOY.md
 ## Limits, stated plainly
 
 - There is no Aurora testnet; real tips run on mainnet with small amounts.
-- The refund and incomplete-deposit paths are covered by tests against a fake Aurora API that follows the documented
-  response shapes. A live refund drill against the real API is still to be done.
-- One real tip, from Base (USDC, send-exact), has run end to end. Other source chains and tokens, and the volatile-token
-  path (`EXACT_OUTPUT`), are untested live.
+- One live refund has run (an incomplete deposit on Base, refunded after the deadline). The other refund outcomes (too much sent,
+  a failed swap, a refund on another chain) are covered by tests against a fake Aurora API that follows the documented response
+  shapes and have not been triggered live.
+- Real tips have run from Base (USDC, send-exact) and Ethereum (native ETH, `EXACT_OUTPUT`). Other source chains and tokens,
+  Bitcoin and the other non-EVM routes are untested live.
 - Intents Deposits (persistent addresses, Plan B) is not built: it needs Aurora to approve the organisation.
-- Aurora returned the quote's deadline 72 hours after the one we asked for (observed, unexplained); the app shows the
-  earlier one. See [docs/AURORA-NOTES.md](docs/AURORA-NOTES.md).
+- Aurora's quote reports a deadline 72 hours after the one we request. The refund drill showed the requested one governs (the refund
+  came 46 seconds after it), and the app shows that earlier deadline. See [docs/AURORA-NOTES.md](docs/AURORA-NOTES.md).
 - `__tests__/App.test.tsx` (from the original app template) fails to parse a dependency and is not part of this work.
 - The recipient must already hold a USDC token account on Solana; otherwise the app says so instead of taking a deposit.
 - Format checks cannot prove an address is the tipper's own. EVM addresses are format-checked only (no EIP-55 checksum).
