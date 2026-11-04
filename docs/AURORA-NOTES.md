@@ -1,8 +1,8 @@
 # Aurora Intents notes (Swap API + Persistent Addresses)
 
 Read on 2026-10-29 from docs.intents.aurora.dev (page markdown, appending `.md` to the page URL), before an API key existed.
-Since then the backend has called tokens, quote (dry and live), status and incidents with a real key, and one real tip has
-run (Base USDC -> Solana USDC). Statements marked "Observed" below come from those calls; everything else is the
+Since then the backend has called tokens, quote (dry and live), status and incidents with a real key, and two real tips (Base USDC on
+2026-10-29, Ethereum ETH on 2026-11-04) and one live refund (Base ETH, 2026-11-04) have run. Statements marked "Observed" below come from those calls; everything else is the
 documentation's word. What is still unconfirmed is listed under UNVERIFIED at the end. The persistent-address (Plan B) section
 comes from the docs only; it has not been called.
 
@@ -85,8 +85,8 @@ Terminal per the docs ("until SUCCESS, REFUNDED or FAILED"): `SUCCESS`, `REFUNDE
 `swapDetails`: `intentHashes[], nearTxHashes[], amountIn, amountInFormatted, amountInUsd, amountOut, amountOutFormatted, amountOutUsd, slippage, originChainTxHashes[{hash, explorerUrl}], destinationChainTxHashes[{hash, explorerUrl}], refundedAmount, refundedAmountFormatted, refundedAmountUsd, refundReason, depositedAmount, depositedAmountFormatted, depositedAmountUsd, referral`.
 
 The docs describe `explorerUrl` for each hash, but **observed 2026-10-29: Aurora returned the hashes with `explorerUrl: ""`**, so the
-backend builds the explorer links itself from the chain and the hash (`backend/src/explorers.js`; only Base and Solana are verified
-live). A refund shows as `REFUNDED` with `refundedAmount*` and `refundReason` (docs; never observed).
+backend builds the explorer links itself from the chain and the hash (`backend/src/explorers.js`; the Base, Ethereum and Solana links, and the Base refund link, have been checked live, the rest have not).
+A refund shows as `REFUNDED` with `refundedAmount*` and `refundReason` (docs; first observed live on 2026-11-04, see the refund section).
 
 ## Supported tokens: `GET /api/tokens/{apiKey}`
 
@@ -161,7 +161,7 @@ Individual user cases go through https://aurora.dev/intents-support with the tra
 
 ## UNVERIFIED (confirm with the first real call)
 
-1. That `EXACT_OUTPUT` quotes return a `depositAddress` for every origin asset we list. Only Base USDC with `EXACT_INPUT` has been quoted (live, non-dry) and paid; no other origin asset or `EXACT_OUTPUT` quote with a real deposit address has been exercised.
+1. That `EXACT_OUTPUT` quotes return a `depositAddress` for every origin asset we list. Base USDC with `EXACT_INPUT` (2026-10-29) and native ETH with `EXACT_OUTPUT` on Ethereum and on Base (2026-11-04) have been quoted live with a real deposit address and paid or refunded; no other origin asset (USDC or USDT on other chains, POL, BNB, AVAX, BTC, NEAR, TRON) has been exercised.
 2. That the Solana recipient needs an existing USDC token account (the backend checks it before quoting; if Aurora creates it, the check can be relaxed). The creator wallet used already had one, so this was not tested.
 3. The real `deadline` default and `timeEstimate` per chain. (Resolved 2026-11-04: the requested deadline governs refunds; see the refund section above.) Observed 2026-10-29 for Base USDC (request `deadline` = now + 30 min):
    the quote response carried `deadline` and `timeWhenInactive` exactly 72 h after the requested time, while `quoteRequest.deadline`
@@ -175,5 +175,5 @@ Individual user cases go through https://aurora.dev/intents-support with the tra
    chain and hash (`backend/src/explorers.js`). Fees were about 1% (1.04 in, 1.029777 out). `KNOWN_DEPOSIT_TX` was not seen by
    our 6 to 8 second polling (it may be too short-lived, or skipped).
 5. ~~Whether `/api/tokens` exposes every chain~~: observed, yes for all ten chains the app offers (the Asset IDs table lists only some of them).
-6. Refund outcomes: ONE has been triggered live (incomplete deposit, refunded as `QUOTE_EXPIRED` after the deadline). Too much sent, a failed swap and a refund on a non-Base chain have not; the app's handling of those follows the documented response shapes and is tested against a fake server only.
+6. Refund outcomes: ONE has been triggered live (incomplete deposit, refunded as `QUOTE_EXPIRED` after the deadline). Too much sent, a failed swap and a refund on a non-Base chain have not; the app's handling of those follows the documented response shapes and is tested against a fake server only. The live one: deposit tx `0x9b0acb49b84a3c19535ef57a6a7b17c92d35af5219388b9e9472f5d5155c5b60`, refund tx on Base `0x10aa658f4f236a59d4147cb7fb83f261d34bf71b5f0843922d401106e4ffd2c8`, receipt https://tipjar-aurora.pages.dev/#tip=0x56F3724eE72fF7DE7CE747b553aC8A8cE72EC7c6.
 7. Incidents: `GET /api/incidents` was observed returning chain-scope and token-scope entries (a `bsc` withdrawal pause on 2026-10-28/29, since resolved). The backend hides an affected chain and refuses quotes there; the `direction` semantics (withdraw vs deposit) are as documented, not tested beyond that one incident.

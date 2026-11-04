@@ -2,15 +2,11 @@
 
 Target length 3:15. Anything run against a fake API is labelled on screen as such.
 
-**Status (2026-10-31):** the one real tip (Base -> Solana, 2026-10-29) was made **without a screen recording**, so no footage of
-the send exists, and the tipper wallet no longer holds enough for another real tip. The video therefore must not show the send as
-live footage. It can show: the page and flow against the labelled fake API, then the real tip's read-only receipt
-(`https://tipjar-aurora.pages.dev/#tip=0xbfa9d9c3457acaa0f755c79631758673dbc7b00a`) and both explorer pages for it, opened live. The
-scene table and checklist below were written before this and describe the original plan; read "Real tip" as "the receipt and explorer pages".
+**Status (2026-11-04):** two real tips (Base 2026-10-29, Ethereum 2026-11-04) and one live refund (Base, 2026-11-04) have run on mainnet. None of the sends was screen-recorded (the recording of the Nov 4 sends was lost), so the video must not show a send as live footage. It shows the page and flow against the labelled fake API where needed, then each run's read-only receipt page and its explorer pages, recorded from the receipt links: Base `#tip=0xbfa9d9c3457acaa0f755c79631758673dbc7b00a`, Ethereum `#tip=0x4D024F29e1Ae54AA3CF14C4A69F59D3B675ffABC`, and the refund `#tip=0x56F3724eE72fF7DE7CE747b553aC8A8cE72EC7c6` (deposit tx `0x9b0acb49b84a3c19535ef57a6a7b17c92d35af5219388b9e9472f5d5155c5b60`, refund tx `0x10aa658f4f236a59d4147cb7fb83f261d34bf71b5f0843922d401106e4ffd2c8`). The scene table and checklist below were written before this; read "real tip" as "the receipt and explorer pages".
 
 ## What must be in it (from the judging rubric)
 
-1. A working flow, not a mock: one real tip from another chain arriving as USDC in a Solana wallet (shown through its receipt page and both explorer pages; the send itself was not recorded).
+1. A working flow, not a mock: real tips from Base and Ethereum arriving as USDC in a Solana wallet, and a real refund (shown through the receipt pages and the explorer pages; the sends themselves were not recorded).
 2. The friction it removes: a tipper holding value on another chain cannot tip a Solana creator without a Solana wallet.
 3. Settlement and refund handling shown, not described.
 4. A clean flow with no unnecessary actions.
@@ -32,7 +28,7 @@ scene table and checklist below were written before this and describe the origin
 ## Capture checklist
 
 - Surface: the web build (the same screen code as the app, hosted as static files). Screen-record the desktop browser window with the system recorder; the Android app is shown with stills or a short phone clip only if one exists.
-- Wallet for the real tip: the one used in the first real tip; show the app, never a seed phrase or a key.
+- Wallet: the tipper wallet used for the real runs; show the app, never a seed phrase or a key.
 - Open both explorer links on camera. Do not blur the transaction hashes: they are the evidence.
 - Fake-API footage (kept outside the repo with its harness) always carries the red "FAKE AURORA API" banner; keep it visible.
 - A second real run is only possible if the tipper wallet is funded again; if so, run `backend/scripts/preflight.mjs` first and record one take.

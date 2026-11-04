@@ -87,8 +87,11 @@ Tipper (phone)                Tip Jar backend                Aurora Swap API    
 
 ## Settlement and refund handling
 
-Implemented in the backend and the screen and covered by tests against a fake Aurora API. Only the success path has run
-live (one real tip); the refund, shortfall, expiry and failure paths have never been triggered against the real API:
+Implemented in the backend and the screen and covered by tests against a fake Aurora API. Live on mainnet: the success path has run
+twice (Base and Ethereum) and **one refund has run end to end**: an incomplete deposit of 0.00045 ETH on Base (deposit tx
+`0x9b0acb49b84a3c19535ef57a6a7b17c92d35af5219388b9e9472f5d5155c5b60`) was refunded after the deadline, 0.00044944 ETH, reason `QUOTE_EXPIRED`, refund tx on Base
+`0x10aa658f4f236a59d4147cb7fb83f261d34bf71b5f0843922d401106e4ffd2c8`, receipt https://tipjar-aurora.pages.dev/#tip=0x56F3724eE72fF7DE7CE747b553aC8A8cE72EC7c6. The other outcomes (too much
+sent, a failed swap, a refund on another chain) have not been triggered live:
 - Refund address is required up front, on the tipper's own chain, format-checked (base58check, bech32/bech32m
   checksums for Bitcoin and TRON) before any deposit address exists.
 - Sending too little: status `INCOMPLETE_DEPOSIT` shows the exact shortfall; below the minimum or past the deadline,
