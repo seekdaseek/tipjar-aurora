@@ -10,6 +10,8 @@ import StatusCard from '../anyChain/StatusCard';
 import QrCode from '../anyChain/QrCode';
 import {shareAddress, selectAddress} from '../anyChain/shareAddress';
 import {copyAddress} from '../anyChain/copyFlow';
+import {canPayWithWallet, describeWalletError} from '../anyChain/payWallet';
+import {payFromWallet, walletAvailable} from '../anyChain/walletProvider';
 
 type Props = {navigation: NativeStackNavigationProp<RootStackParamList, 'AnyChain'>; route: RouteProp<RootStackParamList, 'AnyChain'>};
 const AMOUNTS = ['1', '2', '5', '10', '25'];
@@ -30,6 +32,7 @@ export default function AnyChainTipScreen({navigation, route}: Props) {
   const [pollErr, setPollErr] = useState('');
   const [now, setNow] = useState(Date.now());
   const [copyState, setCopyState] = useState<'idle' | 'ok' | 'failed'>('idle');
+  const [pay, setPay] = useState<{state: 'idle' | 'paying' | 'sent' | 'error'; msg: string}>({state: 'idle', msg: ''});
   const stopped = useRef(false);
 
   const loadRoutes = useCallback(() => {
@@ -81,6 +84,10 @@ export default function AnyChainTipScreen({navigation, route}: Props) {
   }, [quote]);
 
   const open = (u: string) => { if (isHttps(u)) Linking.openURL(u).catch(() => {}); };
+  const payNow = (q: Quote) => {
+    setPay({state: 'paying', msg: ''});
+    payFromWallet(q).then(() => setPay({state: 'sent', msg: ''})).catch(e => setPay({state: 'error', msg: describeWalletError(e)}));
+  };
 
   // ---------- step 2: deposit + live tracking ----------
   if (quote) {
@@ -94,6 +101,14 @@ export default function AnyChainTipScreen({navigation, route}: Props) {
             <>
               <Text style={s.big}>Send {quote.sendAmount} {quote.symbol}</Text>
               <Text style={s.sub}>on {quote.chainLabel}{quote.sendAmountUsd ? ` · about $${quote.sendAmountUsd}` : ''} → {name} receives {quote.receiveUsdc} USDC on Solana</Text>
+              {walletAvailable() && canPayWithWallet(quote) && (
+                <View style={{marginBottom: 14}}>
+                  <TouchableOpacity style={[s.primary, {marginTop: 0}, (pay.state === 'paying' || pay.state === 'sent') && s.primaryOff]} disabled={pay.state === 'paying' || pay.state === 'sent'} onPress={() => payNow(quote)}>
+                    <Text style={s.primaryText}>{pay.state === 'paying' ? 'Confirm in your wallet…' : pay.state === 'sent' ? 'Sent, waiting for Aurora' : `Pay ${quote.sendAmount} ${quote.symbol} with your wallet`}</Text>
+                  </TouchableOpacity>
+                  {pay.state === 'error' ? <Text style={s.msgBad}>{pay.msg}</Text> : <Text style={s.fine}>Your wallet asks you to confirm. Or copy the address below and pay from any wallet.</Text>}
+                </View>
+              )}
               <View style={s.qrCard}>
                 <QrCode value={quote.qr} />
                 <Text selectable testID="deposit-address" style={s.addr}>{quote.depositAddress}</Text>
