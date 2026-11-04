@@ -1,4 +1,4 @@
-import { ADDRESS_CHECKS, formatMinor, isSolanaAddress, usdToMinor } from './validate.js';
+import { ADDRESS_CHECKS, formatMinor, isSolanaAddress, isTokenContract, usdToMinor } from './validate.js';
 import { buildRoutes, CHAINS, FAMILY_HINT, DEST } from './routes.js';
 import { txLinks } from './explorers.js';
 
@@ -144,6 +144,8 @@ export class TipService {
 
     if (!ADDRESS_CHECKS[c.family]?.(refundTo))
       throw new TipError('bad_refund_address', `That does not look like a valid ${c.label} address. It is where a refund would go, so it must be yours.`);
+    if (isTokenContract(refundTo, tok))
+      throw new TipError('bad_refund_address', "That is the token's own contract address, not a wallet, so a refund sent there would be lost. Use your own address.");
     if (!isSolanaAddress(creatorWallet)) throw new TipError('bad_creator', 'The creator wallet is not a valid Solana address.');
 
     if (this.registry) {

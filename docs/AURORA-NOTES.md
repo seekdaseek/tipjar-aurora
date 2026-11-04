@@ -114,6 +114,14 @@ The backend does not trust this table: it loads `/api/tokens/{apiKey}` on first 
 
 Per API key, per endpoint: 100 requests / 10 s and 2000 / hour, both fixed clock-aligned windows. Rejected requests still count toward the hour. 429 carries `Retry-After` (seconds). Guidance from the docs: poll status every 5-10 s (one swap polled every second burns 3600/h), cache the token list, quote on user intent not per keystroke, auto-refresh quotes no faster than every 10 s. The backend follows all of it: status polling is cached server-side so any number of phones watching one tip cost one upstream call per 5 s.
 
+## Observed 2026-11-04 (live dry quotes, no deposit addresses)
+
+- **Refund address equal to the origin token's own contract gives `400 Internal server error`.** Seen for NEAR wNEAR with `refundTo: wrap.near` (that account IS the wNEAR contract) and for TRON USDT with `refundTo` set to the USDT contract `TR7NHq...`. The same routes quote normally (wNEAR 19 s, TRON USDT 77 s, 10 USD in) with an ordinary refund account. A first reading of this as "those routes are broken" was wrong. Such a refund would be lost anyway, so the backend refuses a refund address that is the token's contract or NEAR account (`isTokenContract` in `backend/src/validate.js`).
+- **Real floors.** BTC: `400 Amount is too low for bridge, try at least 8300` (satoshis, about 6.5 USD at 78,500 USD per BTC), so the app's BTC minimum is 8 USD. TRX: Aurora rejects under 4 TRX (about 1.3 USD); the app's TRON minimum is 2 USD. No dollar floor appeared on EVM quotes down to 0.25 USD; the app keeps its own 1 USD minimum.
+- For an `EXACT_INPUT` quote `minAmountIn` simply equals the amount asked for, so it is not a market minimum.
+- `EXACT_OUTPUT` (what the page uses for ETH): the quote's `amountIn` is about 0.6 to 1.7 percent above the exact price (it carries a slippage margin), `minAmountIn` is the exact-price amount, and the creator receives exactly the requested USDC.
+- Estimates seen: Arbitrum 24 s, Base 34 s, Ethereum 44 s, NEAR 17 s, TRON 77 to 79 s, BTC about 13 minutes.
+
 ## Minimums, testing
 
 - No public testnet. Test on mainnet with small amounts above the thresholds.

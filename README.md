@@ -81,7 +81,8 @@ live (one real tip); the refund, shortfall, expiry and failure paths have never 
 - Failed swap: never reported as arrived; points to Aurora support with the deposit address.
 - A quote that would pay the creator less than the tip, or echoes a different recipient or refund address, is never
   shown to the user.
-- Minimums per Aurora's guidance ($1, $2 for TRON) are enforced before the deposit address is shown.
+- Minimums are enforced before the deposit address is shown: 1 USD, 2 USD for TRON and 8 USD for Bitcoin (Aurora rejects under 8,300 sat).
+- A refund address that is the token's own contract (or NEAR token account) is refused: a refund sent there would be lost.
 - Upstream outages: last known state is served; the app keeps polling.
 
 ## Run it

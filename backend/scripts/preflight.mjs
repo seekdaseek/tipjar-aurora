@@ -1,6 +1,8 @@
 // Usage (after AURORA_API_KEY is in an env file):
-//   node --env-file=<env file> scripts/preflight.mjs --wallet=0x<tipper> --creator=<creator solana wallet> [--chain=base --symbol=USDC --amount=1.04 --mode=send|receive]
-// Run right before proposing a real-money tip: it re-reads the wallet balance and Aurora's live minimum and prints GO or NO-GO.
+//   node --env-file=<env file> scripts/preflight.mjs --wallet=0x<tipper> --creator=<creator solana wallet> [--chain=eth|base|arb --symbol=USDC|USDT|ETH --amount=1.04 --mode=send|receive --drill=<token amount>]
+// --mode=send: the tipper sends exactly --amount (stablecoins, the default for USDC/USDT); --mode=receive: the creator receives --amount USD (the default for ETH).
+// --drill=0.00045: check a deliberately short deposit for a refund test instead of a full tip.
+// Run right before proposing a real-money tip: it re-reads the wallet balance, the network fee and Aurora's live quote and prints GO or NO-GO.
 import { AuroraClient } from '../src/aurora.js';
 import { preflight } from '../src/preflight.js';
 
@@ -11,7 +13,8 @@ const cfg = {
   amountUsd: a.amount ?? '1.04',
   wallet: a.wallet,
   creatorWallet: a.creator,
-  sendExact: a.mode !== 'receive',
+  sendExact: a.mode ? a.mode !== 'receive' : ['USDC', 'USDT'].includes(a.symbol ?? 'USDC'),
+  drillAmount: a.drill,
 };
 if (!cfg.wallet || !cfg.creatorWallet) {
   console.error('usage: --wallet=<tipper address on the chain> --creator=<creator Solana wallet>');

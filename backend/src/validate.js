@@ -104,6 +104,16 @@ export const ADDRESS_CHECKS = {
 };
 
 /** "2", "2.5", "2.50" -> 2500000n (USDC has 6 decimals). Null when malformed. */
+/** True when `address` is the origin token's own contract/account (e.g. the USDC contract, wrap.near): a refund sent there is lost,
+ *  and Aurora answers 400 for it (observed 2026-11-04). `tok.contract` comes from the live token list; NEAR tokens are accounts named in the assetId. */
+export function isTokenContract(address, tok) {
+  if (typeof address !== 'string' || !tok) return false;
+  const a = address.toLowerCase();
+  if (tok.contract && a === String(tok.contract).toLowerCase()) return true;
+  const m = /^nep141:([a-z0-9._-]+)$/.exec(tok.assetId ?? '');
+  return !!m && a === m[1];
+}
+
 export function usdToMinor(s, decimals = 6) {
   if (typeof s !== 'string' || !/^\d{1,6}(\.\d{1,6})?$/.test(s)) return null;
   const [whole, frac = ''] = s.split('.');

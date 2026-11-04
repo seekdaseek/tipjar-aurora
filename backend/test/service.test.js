@@ -73,7 +73,7 @@ test('BTC uses a BIP21 QR with the amount, 120 min deadline', async () => {
   reset();
   fake.quoteOver = { amountInFormatted: '0.0000375', depositAddress: 'bc1qdeposit0000000000000000000000000000' };
   const { service } = makeService(fake);
-  const q = await service.createTip(goodTip({ chain: 'btc', symbol: 'BTC', refundTo: 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq' }));
+  const q = await service.createTip(goodTip({ chain: 'btc', symbol: 'BTC', amountUsd: '8', refundTo: 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq' }));
   assert.equal(q.qr, 'bitcoin:bc1qdeposit0000000000000000000000000000?amount=0.0000375');
   assert.equal(fake.requests.find((r) => r.path.startsWith('/api/quote')).body.deadline, '2026-10-30T12:00:00.000Z');
 });
@@ -87,7 +87,7 @@ test('input validation happens before any quote is requested', async () => {
   await rejects(service.createTip(goodTip({ amountUsd: '51' })), 'above_maximum');
   await rejects(service.createTip(goodTip({ amountUsd: '2e3' })), 'bad_amount');
   await rejects(service.createTip(goodTip({ refundTo: 'nope' })), 'bad_refund_address');
-  await rejects(service.createTip(goodTip({ chain: 'btc', symbol: 'BTC', refundTo: EVM })), 'bad_refund_address');
+  await rejects(service.createTip(goodTip({ chain: 'btc', symbol: 'BTC', amountUsd: '8', refundTo: EVM })), 'bad_refund_address');
   await rejects(service.createTip(goodTip({ creatorWallet: EVM })), 'bad_creator');
   await rejects(service.createTip(goodTip({ chain: 'tron', symbol: 'USDT', amountUsd: '1.5', refundTo: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t' })), 'below_minimum'); // TRON minimum is $2
   assert.equal(fake.requests.filter((r) => r.path.startsWith('/api/quote')).length, 0);
@@ -434,4 +434,26 @@ test('sendAmountUsd is shown in cents, not Aurora\'s 12 decimals', async () => {
   reset();
   fake.quoteOver = { amountInUsd: undefined };
   assert.equal((await makeService(fake).service.createTip(goodTip())).sendAmountUsd, null);
+});
+
+test('refund address: a token\'s own contract is refused before any quote (Aurora answers 400 and the refund would be lost)', async () => {
+  reset();
+  const { service } = makeService(fake);
+  const before = fake.requests.length;
+  await rejects(service.createTip(goodTip({ chain: 'base', symbol: 'USDC', amountUsd: '2', refundTo: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913' })), 'bad_refund_address');
+  await rejects(service.createTip(goodTip({ chain: 'base', symbol: 'USDC', amountUsd: '2', refundTo: '0x833589FCD6EDB6E08F4C7C32D4F71B54BDA02913' })), 'bad_refund_address'); // case-insensitive for 0x
+  await rejects(service.createTip(goodTip({ chain: 'tron', symbol: 'USDT', amountUsd: '3', refundTo: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t' })), 'bad_refund_address');
+  assert.equal(fake.requests.slice(before).filter((r) => r.path.startsWith('/api/quote')).length, 0, 'no quote was requested');
+  // the same chain with an ordinary wallet is fine
+  assert.ok((await service.createTip(goodTip({ chain: 'base', symbol: 'USDC', amountUsd: '2' }))).depositAddress);
+});
+
+test('BTC minimum is 8 USD (Aurora rejects below 8,300 sat), with the figure in the message', async () => {
+  reset();
+  const { service } = makeService(fake);
+  const err = await service.createTip(goodTip({ chain: 'btc', symbol: 'BTC', amountUsd: '2', refundTo: 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq' })).catch((e) => e);
+  assert.equal(err.code, 'below_minimum');
+  assert.match(err.message, /Bitcoin is \$8/);
+  const r = await service.routes();
+  assert.equal(r.chains.find((c) => c.key === 'btc').minUsd, 8);
 });

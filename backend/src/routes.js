@@ -12,7 +12,7 @@ export const CHAINS = [
   { key: 'pol', label: 'Polygon', family: 'evm', slug: 'pol', tokens: ['POL', 'USDC'], minUsd: 1, deadlineMin: 30 },
   { key: 'bsc', label: 'BNB Chain', family: 'evm', slug: 'bsc', tokens: ['BNB', 'USDC', 'USDT'], minUsd: 1, deadlineMin: 30 },
   { key: 'avax', label: 'Avalanche', family: 'evm', slug: 'avax', tokens: ['AVAX', 'USDC'], minUsd: 1, deadlineMin: 30 },
-  { key: 'btc', label: 'Bitcoin', family: 'btc', slug: 'btc', tokens: ['BTC'], minUsd: 1, deadlineMin: 120 },
+  { key: 'btc', label: 'Bitcoin', family: 'btc', slug: 'btc', tokens: ['BTC'], minUsd: 8, deadlineMin: 120 }, // Aurora rejects under 8,300 sat (about 6.5 USD at 78k): 'Amount is too low for bridge'
   { key: 'near', label: 'NEAR', family: 'near', slug: 'near', tokens: ['wNEAR', 'USDC'], minUsd: 1, deadlineMin: 30 },
   // Aurora: recommended minimum is $2 on TRON, below that funds can get stuck.
   { key: 'tron', label: 'TRON', family: 'tron', slug: 'tron', tokens: ['TRX', 'USDT'], minUsd: 2, deadlineMin: 30 },
@@ -37,7 +37,7 @@ export function buildRoutes(tokenList) {
     const offered = [];
     for (const sym of c.tokens) {
       const t = tokens.find((x) => x.blockchain === c.slug && x.symbol === sym);
-      if (t) offered.push({ symbol: displaySymbol(sym), auroraSymbol: sym, assetId: t.assetId, decimals: t.decimals, priceUsd: t.price });
+      if (t) offered.push({ symbol: displaySymbol(sym), auroraSymbol: sym, assetId: t.assetId, decimals: t.decimals, priceUsd: t.price, contract: t.contractAddress ?? null });
     }
     if (offered.length) chains.push({ ...c, offered });
   }

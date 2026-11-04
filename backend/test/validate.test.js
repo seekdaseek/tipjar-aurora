@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatMinor, isBtcAddress, isEvmAddress, isNearAccount, isSolanaAddress, isTronAddress, usdToMinor } from '../src/validate.js';
+import { formatMinor, isBtcAddress, isEvmAddress, isNearAccount, isSolanaAddress, isTokenContract, isTronAddress, usdToMinor } from '../src/validate.js';
 
 // Known-positive samples first (BIP173/BIP350 test vectors, Bitcoin genesis, USDT-TRON contract, cj7).
 test('accepts known-valid addresses', () => {
@@ -47,4 +47,16 @@ test('formatMinor', () => {
   assert.equal(formatMinor(1_000_000_000_000_000n, 18), '0.001');
   assert.equal(formatMinor(2_000_000n, 6), '2');
   assert.equal(formatMinor(1n, 8), '0.00000001');
+});
+
+test('isTokenContract: the token\'s own contract or NEAR account is caught, an ordinary wallet is not', () => {
+  const baseUsdc = { contract: '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', assetId: 'nep141:base-0x833589fcd6edb6e08f4c7c32d4f71b54bda02913.omft.near' };
+  assert.ok(isTokenContract('0x833589fcD6eDb6E08f4c7C32D4f71b54bdA02913', baseUsdc)); // mixed case
+  assert.ok(isTokenContract('TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', { contract: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t', assetId: 'nep141:tron-d28a.omft.near' }));
+  assert.ok(isTokenContract('wrap.near', { contract: null, assetId: 'nep141:wrap.near' }));
+  assert.ok(isTokenContract('17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1', { assetId: 'nep141:17208628f84f5d6ad33f0da3bbbeb27ffcb398eac501a31bd6ad2011e36133a1' }));
+  assert.equal(isTokenContract('0xA11CE00000000000000000000000000000000B01', baseUsdc), false);
+  assert.equal(isTokenContract('aurora', { assetId: 'nep141:wrap.near' }), false);
+  assert.equal(isTokenContract(undefined, baseUsdc), false);
+  assert.equal(isTokenContract('0xabc', undefined), false);
 });
